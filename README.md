@@ -1,6 +1,22 @@
 # ONE DAY QUEST 🎮⚔️
 ### *Turn an ordinary day into an adventure.*
 
+[![ONE DAY QUEST App Preview](assets/preview.jpg)](https://github.com/dhev27/One-Day-Quest)
+
+<p align="center">
+  <a href="https://github.com/dhev27/One-Day-Quest">
+    <img src="https://img.shields.io/badge/PLAY_NOW-ONE_DAY_QUEST_⚔️-8b5cf6?style=for-the-badge&logo=gamecontroller&logoColor=white" alt="Play Now" />
+  </a>
+  <a href="https://github.com/dhev27/One-Day-Quest">
+    <img src="https://img.shields.io/github/stars/dhev27/One-Day-Quest?style=for-the-badge&color=f59e0b" alt="GitHub Stars" />
+  </a>
+  <img src="https://img.shields.io/badge/Hackathon-The_Perfect_Day-10b981?style=for-the-badge" alt="Hackathon Theme" />
+</p>
+
+> 👆 **Click the preview screenshot above to explore the live application!**
+
+---
+
 > **Hackathon Theme: “The Perfect Day”**  
 > An RPG mini-adventure game for real life that turns mundane tasks into quests, focus dungeons, XP, streaks, level-ups, secret mysteries, and cosmetic loot.
 
