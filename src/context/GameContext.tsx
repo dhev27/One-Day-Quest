@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
   Achievement,
-  AvatarId,
   DaySetup,
   DaySummary,
   MapNode,
@@ -9,9 +8,9 @@ import {
   Quest,
   RandomEvent,
   ShopItem,
+  VibeType,
 } from '../types/quest';
 import {
-  AVATAR_OPTIONS,
   DEMO_MAP_NODES,
   DEMO_PLAYER_PROFILE,
   DEMO_QUESTS,
@@ -19,7 +18,7 @@ import {
   INITIAL_SHOP_ITEMS,
   RANDOM_SURPRISE_EVENTS,
 } from '../utils/demoData';
-import { generateQuestsForDay } from '../utils/questGenerator';
+import { generateQuestsForDay, generateSmartSuggestions } from '../utils/questGenerator';
 import { soundFx } from '../utils/sound';
 import { triggerCelebration, triggerCoinShower, triggerComboBurst, triggerLevelUpFireworks } from '../utils/confetti';
 
@@ -50,7 +49,7 @@ interface GameContextType {
   toggleSound: () => void;
   toggleChaosMode: () => void;
 
-  // Quests
+  // Quests & User Driven Tasks
   quests: Quest[];
   setQuests: React.Dispatch<React.SetStateAction<Quest[]>>;
   activeQuestDetail: Quest | null;
@@ -58,7 +57,22 @@ interface GameContextType {
   acceptQuest: (questId: string) => void;
   completeQuest: (questId: string) => void;
   abandonQuest: (questId: string) => void;
-  addCustomQuest: (quest: Quest) => void;
+  addUserQuest: (questData: Partial<Quest>) => void;
+  editQuest: (questId: string, updatedData: Partial<Quest>) => void;
+  deleteQuest: (questId: string) => void;
+  reorderQuest: (fromIndex: number, toIndex: number) => void;
+  convertSuggestionToActive: (suggestionId: string) => void;
+  rejectSuggestion: (suggestionId: string) => void;
+  regenerateSuggestions: () => void;
+  trimQuestsToFitTime: () => void;
+
+  // Time & Budget Management
+  totalAvailableTimeMinutes: number;
+  setTotalAvailableTimeMinutes: (mins: number) => void;
+  userVibe: VibeType;
+  setUserVibe: (vibe: VibeType) => void;
+  allowOvertime: boolean;
+  setAllowOvertime: (allow: boolean) => void;
 
   // Day Setup & Map
   daySetup: DaySetup | null;
@@ -103,7 +117,7 @@ interface GameContextType {
   resetAllProgress: () => void;
 }
 
-const STORAGE_KEY = 'one_day_quest_state_v1';
+const STORAGE_KEY = 'one_day_quest_state_v2';
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
@@ -112,8 +126,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [player, setPlayer] = useState<PlayerProfile>(DEMO_PLAYER_PROFILE);
   const [quests, setQuests] = useState<Quest[]>(DEMO_QUESTS);
   const [mapNodes, setMapNodes] = useState<MapNode[]>(DEMO_MAP_NODES);
-  const [dayTheme, setDayTheme] = useState<string>('Operation: Hackathon Glory');
+  const [dayTheme, setDayTheme] = useState<string>('The Main Character Day');
   const [daySetup, setDaySetup] = useState<DaySetup | null>(null);
+
+  // Time budget & vibe
+  const [totalAvailableTimeMinutes, setTotalAvailableTimeMinutes] = useState<number>(120);
+  const [userVibe, setUserVibe] = useState<VibeType>('productive');
+  const [allowOvertime, setAllowOvertime] = useState<boolean>(false);
+  const [rejectedSuggestionIds, setRejectedSuggestionIds] = useState<string[]>([]);
 
   const [shopItems] = useState<ShopItem[]>(INITIAL_SHOP_ITEMS);
   const [achievements, setAchievements] = useState<Achievement[]>(INITIAL_ACHIEVEMENTS);
@@ -138,12 +158,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [daySummary, setDaySummary] = useState<DaySummary | null>(null);
 
-  // Sync sound settings with audio engine
+  // Sync sound settings
   useEffect(() => {
     soundFx.setSoundEnabled(player.soundEnabled);
   }, [player.soundEnabled]);
 
-  // Load from local storage if available
+  // Load from local storage
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -153,14 +173,15 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (parsed.quests) setQuests(parsed.quests);
         if (parsed.mapNodes) setMapNodes(parsed.mapNodes);
         if (parsed.dayTheme) setDayTheme(parsed.dayTheme);
-        if (parsed.achievements) setAchievements(parsed.achievements);
+        if (parsed.totalAvailableTimeMinutes) setTotalAvailableTimeMinutes(parsed.totalAvailableTimeMinutes);
+        if (parsed.userVibe) setUserVibe(parsed.userVibe);
       } catch (e) {
         console.error('Failed to parse local storage', e);
       }
     }
   }, []);
 
-  // Save to local storage on change
+  // Save to local storage
   useEffect(() => {
     try {
       localStorage.setItem(
@@ -170,11 +191,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           quests,
           mapNodes,
           dayTheme,
-          achievements,
+          totalAvailableTimeMinutes,
+          userVibe,
         })
       );
     } catch {}
-  }, [player, quests, mapNodes, dayTheme, achievements]);
+  }, [player, quests, mapNodes, dayTheme, totalAvailableTimeMinutes, userVibe]);
 
   const updatePlayer = (partial: Partial<PlayerProfile>) => {
     setPlayer((prev) => ({ ...prev, ...partial }));
@@ -247,8 +269,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Check combo
     const newComboCount = combo.active ? combo.count + 1 : 1;
-    const isCombo = newComboCount >= 2;
-    if (isCombo) {
+    if (newComboCount >= 2) {
       setTimeout(() => {
         soundFx.playCombo();
         triggerComboBurst();
@@ -293,8 +314,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     });
 
-    // Check if secret quest can be unlocked!
-    const completedCount = updatedQuests.filter((q) => q.status === 'completed').length;
+    // Check secret unlock
+    const completedCount = updatedQuests.filter((q) => q.status === 'completed' && !q.isSuggestion).length;
     const lockedSecret = updatedQuests.find((q) => q.isSecret && q.status === 'locked');
 
     if (lockedSecret && completedCount >= 2) {
@@ -308,13 +329,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSecretUnlockedQuest(lockedSecret);
       }, 1200);
     }
-
-    // Check random event trigger (30% chance or if specific threshold met)
-    if (completedCount === 2 || Math.random() < 0.3) {
-      setTimeout(() => {
-        triggerRandomEvent();
-      }, 2500);
-    }
   };
 
   const abandonQuest = (questId: string) => {
@@ -324,9 +338,104 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
-  const addCustomQuest = (quest: Quest) => {
-    soundFx.playQuestAccept();
-    setQuests((prev) => [quest, ...prev]);
+  // Add User-Created Task (Requirement 1 & 2)
+  const addUserQuest = (questData: Partial<Quest>) => {
+    const duration = questData.timeEstimateMinutes || 45;
+    const xp = questData.xpReward || Math.min(300, duration * 2 + 30);
+    const coins = questData.coinReward || Math.round(xp * 0.3);
+
+    const newQuest: Quest = {
+      id: `user-quest-${Date.now()}`,
+      title: questData.title || 'CUSTOM TASK',
+      subtitle: questData.subtitle || 'Your Personal Objective',
+      description: questData.description || `Complete custom mission: ${questData.title}`,
+      flavorText: 'Victory is sweeter when you choose your own battles.',
+      category: questData.category || 'personal',
+      difficulty: questData.difficulty || (duration >= 60 ? 'hard' : duration >= 45 ? 'medium' : 'easy'),
+      priority: questData.priority || 'important',
+      energyRequired: questData.energyRequired || 'medium',
+      xpReward: xp,
+      coinReward: coins,
+      status: 'available',
+      timeEstimateMinutes: duration,
+      icon: questData.icon || '🎯',
+      isUserCreated: true,
+      customReward: questData.customReward,
+      comboType: 'productivity',
+    };
+
+    setQuests((prev) => [newQuest, ...prev]);
+  };
+
+  // Edit Quest (Requirement 8)
+  const editQuest = (questId: string, updatedData: Partial<Quest>) => {
+    soundFx.playClick(500);
+    setQuests((prev) =>
+      prev.map((q) => (q.id === questId ? { ...q, ...updatedData } : q))
+    );
+  };
+
+  // Delete Quest (Requirement 8)
+  const deleteQuest = (questId: string) => {
+    soundFx.playClick(350);
+    setQuests((prev) => prev.filter((q) => q.id !== questId));
+  };
+
+  // Reorder Quests (Requirement 8)
+  const reorderQuest = (fromIndex: number, toIndex: number) => {
+    soundFx.playClick(400);
+    setQuests((prev) => {
+      const result = Array.from(prev);
+      const [removed] = result.splice(fromIndex, 1);
+      result.splice(toIndex, 0, removed);
+      return result;
+    });
+  };
+
+  // Convert Suggestion to Active Quest (Requirement 4 & 5)
+  const convertSuggestionToActive = (suggestionId: string) => {
+    setQuests((prev) =>
+      prev.map((q) =>
+        q.id === suggestionId ? { ...q, isSuggestion: false, isUserCreated: false } : q
+      )
+    );
+  };
+
+  // Reject Suggestion (Requirement 5)
+  const rejectSuggestion = (suggestionId: string) => {
+    setRejectedSuggestionIds((prev) => [...prev, suggestionId]);
+    setQuests((prev) => prev.filter((q) => q.id !== suggestionId));
+  };
+
+  // Regenerate Suggestions (Requirement 6)
+  const regenerateSuggestions = () => {
+    soundFx.playClick(600);
+    // Remove existing suggestions
+    const nonSuggestions = quests.filter((q) => !q.isSuggestion);
+
+    // Calculate remaining time
+    const usedTime = nonSuggestions.reduce((sum, q) => sum + (q.timeEstimateMinutes || 30), 0);
+    const remaining = Math.max(0, totalAvailableTimeMinutes - usedTime);
+
+    // Generate fresh suggestions
+    const fresh = generateSmartSuggestions(remaining, userVibe, rejectedSuggestionIds);
+    setQuests([...nonSuggestions, ...fresh]);
+  };
+
+  // Trim Quests to fit time (Requirement 11)
+  const trimQuestsToFitTime = () => {
+    soundFx.playClick(400);
+    let currentTotal = 0;
+    const trimmed: Quest[] = [];
+
+    for (const q of quests) {
+      const dur = q.timeEstimateMinutes || 30;
+      if (currentTotal + dur <= totalAvailableTimeMinutes || trimmed.length === 0) {
+        trimmed.push(q);
+        currentTotal += dur;
+      }
+    }
+    setQuests(trimmed);
   };
 
   const clearLastCompletedQuest = () => setLastCompletedQuest(null);
@@ -360,6 +469,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           xpReward: choice.xpBonus + 50,
           coinReward: choice.coinBonus + 15,
           status: 'available',
+          timeEstimateMinutes: 30,
           icon: choice.icon,
         };
         setQuests((prev) => [newQuest, ...prev]);
@@ -373,14 +483,19 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Start new day with procedural generator
   const startNewDayWithSetup = (setup: DaySetup) => {
     setDaySetup(setup);
-    const { quests: genQuests, mapNodes: genNodes, theme } = generateQuestsForDay(setup);
-    setQuests(genQuests);
+    setTotalAvailableTimeMinutes(setup.totalAvailableMinutes);
+    setUserVibe(setup.vibe);
+
+    const { userQuests, suggestedQuests, mapNodes: genNodes, theme } = generateQuestsForDay(setup);
+    
+    // Combine user quests + initial suggestions
+    setQuests([...userQuests, ...suggestedQuests]);
     setMapNodes(genNodes);
     setDayTheme(theme);
     updatePlayer({
       chaosMode: setup.chaosMode,
       stats: {
-        productivity: 70,
+        productivity: 75,
         social: setup.party === 'friends' ? 80 : 50,
         exploration: setup.location === 'city' ? 85 : 60,
         creativity: setup.goals.includes('Creative') ? 90 : 65,
@@ -422,13 +537,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     soundFx.playLevelUp();
     triggerLevelUpFireworks();
 
-    const total = quests.length;
-    const completed = quests.filter((q) => q.status === 'completed').length;
+    const activeQuests = quests.filter((q) => !q.isSuggestion);
+    const total = activeQuests.length;
+    const completed = activeQuests.filter((q) => q.status === 'completed').length;
     const pct = Math.round((completed / Math.max(total, 1)) * 100);
-    const xpTotal = quests
+    const xpTotal = activeQuests
       .filter((q) => q.status === 'completed')
       .reduce((sum, q) => sum + q.xpReward, 0);
-    const coinsTotal = quests
+    const coinsTotal = activeQuests
       .filter((q) => q.status === 'completed')
       .reduce((sum, q) => sum + q.coinReward, 0);
 
@@ -455,12 +571,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       coinsEarned: coinsTotal,
       streak: player.streak + 1,
       titleEarned,
-      summaryText: `You conquered ${completed} out of ${total} missions, defeated daily distractions, unlocked secret paths, and turned what could have been a mundane day into a legendary playthrough.`,
+      summaryText: `You conquered ${completed} out of ${total} missions, took full ownership of your day, and forged your own adventure.`,
       highlights: [
-        '🔥 Smashed deep focus session without getting trapped by notifications',
-        '💧 Restored HP and refreshed your mental stamina',
-        '🗺️ Explored uncharted territory and pushed past comfort zones',
-        '✨ Maintained an unstoppable 5-day adventure streak',
+        '🎯 Took charge of your personal task objectives with custom time budgets',
+        '⚡ Maintained strong momentum and focused execution',
+        '✨ Concluded the day with high scores and earned loot',
       ],
     };
 
@@ -476,6 +591,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setQuests(DEMO_QUESTS);
     setMapNodes(DEMO_MAP_NODES);
     setDayTheme('The Main Character Odyssey');
+    setTotalAvailableTimeMinutes(180);
+    setUserVibe('productive');
     setAchievements(INITIAL_ACHIEVEMENTS);
     setCombo({
       count: 3,
@@ -531,7 +648,20 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         acceptQuest,
         completeQuest,
         abandonQuest,
-        addCustomQuest,
+        addUserQuest,
+        editQuest,
+        deleteQuest,
+        reorderQuest,
+        convertSuggestionToActive,
+        rejectSuggestion,
+        regenerateSuggestions,
+        trimQuestsToFitTime,
+        totalAvailableTimeMinutes,
+        setTotalAvailableTimeMinutes,
+        userVibe,
+        setUserVibe,
+        allowOvertime,
+        setAllowOvertime,
         daySetup,
         setDaySetup,
         mapNodes,

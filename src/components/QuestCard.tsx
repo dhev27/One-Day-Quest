@@ -12,15 +12,42 @@ import {
   ChevronRight,
   Flame,
   Zap,
+  Gift,
+  Plus,
+  X,
+  Edit3,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  User,
 } from 'lucide-react';
 
 interface QuestCardProps {
   quest: Quest;
   onOpenDetail?: (quest: Quest) => void;
+  onEdit?: (quest: Quest) => void;
+  onMoveUp?: (questId: string) => void;
+  onMoveDown?: (questId: string) => void;
+  isFirst?: boolean;
+  isLast?: boolean;
 }
 
-export const QuestCard: React.FC<QuestCardProps> = ({ quest, onOpenDetail }) => {
-  const { acceptQuest, completeQuest } = useGame();
+export const QuestCard: React.FC<QuestCardProps> = ({
+  quest,
+  onOpenDetail,
+  onEdit,
+  onMoveUp,
+  onMoveDown,
+  isFirst,
+  isLast,
+}) => {
+  const {
+    acceptQuest,
+    completeQuest,
+    convertSuggestionToActive,
+    rejectSuggestion,
+    deleteQuest,
+  } = useGame();
 
   const getDifficultyColor = (diff: Quest['difficulty']) => {
     switch (diff) {
@@ -59,37 +86,36 @@ export const QuestCard: React.FC<QuestCardProps> = ({ quest, onOpenDetail }) => 
     }
   };
 
-  const getCategoryBadge = (cat: Quest['category']) => {
-    switch (cat) {
-      case 'main':
-        return { label: 'MAIN QUEST', color: 'bg-amber-900/60 text-amber-300 border-amber-600/60' };
-      case 'side':
-        return { label: 'SIDE QUEST', color: 'bg-indigo-900/60 text-indigo-300 border-indigo-600/60' };
-      case 'exploration':
-        return { label: 'EXPLORATION', color: 'bg-teal-900/60 text-teal-300 border-teal-600/60' };
-      case 'social':
-        return { label: 'SOCIAL ENCOUNTER', color: 'bg-pink-900/60 text-pink-300 border-pink-600/60' };
-      case 'creative':
-        return { label: 'CREATIVE CRAFT', color: 'bg-cyan-900/60 text-cyan-300 border-cyan-600/60' };
-      case 'recovery':
-        return { label: 'HP RECOVERY', color: 'bg-emerald-900/60 text-emerald-300 border-emerald-600/60' };
-      case 'random':
-        return { label: 'CHAOS CARD', color: 'bg-red-900/60 text-red-300 border-red-600/60' };
-      case 'secret':
-        return { label: 'SECRET MYSTERY', color: 'bg-purple-900/60 text-purple-200 border-purple-500/60' };
+  const getPriorityBadge = (p?: Quest['priority']) => {
+    switch (p) {
+      case 'must_do':
+        return { label: 'MUST DO 💀', color: 'bg-rose-950/80 text-rose-300 border-rose-600' };
+      case 'important':
+        return { label: 'IMPORTANT 🔥', color: 'bg-amber-950/80 text-amber-300 border-amber-600' };
+      case 'normal':
+        return { label: 'NORMAL 🙂', color: 'bg-emerald-950/80 text-emerald-300 border-emerald-600' };
+      case 'chill':
+        return { label: 'CHILL 😌', color: 'bg-blue-950/80 text-blue-300 border-blue-600' };
+      default:
+        return null;
     }
   };
 
   const diffStyle = getDifficultyColor(quest.difficulty);
-  const catStyle = getCategoryBadge(quest.category);
+  const priorityBadge = getPriorityBadge(quest.priority);
 
   const isCompleted = quest.status === 'completed';
   const isInProgress = quest.status === 'in_progress';
   const isLocked = quest.status === 'locked';
+  const isSuggestion = quest.isSuggestion;
 
-  // Card Outer Glow & Styling based on status / main
-  const cardBorderClass = isCompleted
+  // Card Outer Glow & Styling
+  const cardBorderClass = isSuggestion
+    ? 'border-dashed border-purple-500/50 bg-[#121124]/90 hover:border-purple-400'
+    : isCompleted
     ? 'border-emerald-600/50 bg-[#0d171d]/90 shadow-glow-emerald/20 opacity-90'
+    : quest.isUserCreated
+    ? 'border-cyan-500/60 bg-[#10172b] shadow-glow-cyan/20 hover:border-cyan-400'
     : quest.isMainQuest
     ? 'border-amber-500/70 bg-[#151724] shadow-glow-gold/30 hover:border-amber-400'
     : isInProgress
@@ -100,30 +126,39 @@ export const QuestCard: React.FC<QuestCardProps> = ({ quest, onOpenDetail }) => 
 
   return (
     <div
-      className={`rounded-2xl p-4 sm:p-5 border quest-card-hover relative transition-all duration-200 flex flex-col justify-between ${cardBorderClass}`}
+      className={`rounded-3xl p-4 sm:p-5 border quest-card-hover relative transition-all duration-200 flex flex-col justify-between ${cardBorderClass}`}
     >
-      {/* Top Banner Tag for Main Quest */}
-      {quest.isMainQuest && (
+      {/* Top Banner Tag for User Created / Suggestion / Boss */}
+      {quest.isUserCreated && (
+        <div className="absolute -top-3 left-4 px-2.5 py-0.5 rounded-md bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-extrabold text-[10px] uppercase tracking-wider flex items-center gap-1 shadow-md">
+          <User className="w-3 h-3" />
+          <span>YOUR TASK</span>
+        </div>
+      )}
+
+      {isSuggestion && (
+        <div className="absolute -top-3 left-4 px-2.5 py-0.5 rounded-md bg-gradient-to-r from-purple-600 to-pink-600 text-white font-extrabold text-[10px] uppercase tracking-wider flex items-center gap-1 shadow-md">
+          <Sparkles className="w-3 h-3 text-yellow-300 animate-spin" />
+          <span>SUGGESTION</span>
+        </div>
+      )}
+
+      {quest.isMainQuest && !quest.isUserCreated && (
         <div className="absolute -top-3 left-4 px-2.5 py-0.5 rounded-md bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 font-extrabold text-[10px] uppercase tracking-wider flex items-center gap-1 shadow-md">
           <Flame className="w-3 h-3 fill-slate-950" />
           <span>BOSS QUEST</span>
         </div>
       )}
 
-      {/* Chaos Card Badge */}
-      {quest.isChaos && (
-        <div className="absolute -top-3 right-4 px-2.5 py-0.5 rounded-md bg-rose-600 text-white font-extrabold text-[10px] uppercase tracking-wider flex items-center gap-1 shadow-md">
-          <span>😈 CHAOS MODE</span>
-        </div>
-      )}
-
       <div>
-        {/* Header Badges */}
-        <div className="flex items-center justify-between gap-2 mb-3">
+        {/* Header Badges & Actions */}
+        <div className="flex items-center justify-between gap-2 mb-3 mt-1">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${catStyle.color}`}>
-              {catStyle.label}
-            </span>
+            {priorityBadge && (
+              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md border ${priorityBadge.color}`}>
+                {priorityBadge.label}
+              </span>
+            )}
             <span
               className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${diffStyle.bg} ${diffStyle.border} ${diffStyle.text}`}
             >
@@ -132,23 +167,55 @@ export const QuestCard: React.FC<QuestCardProps> = ({ quest, onOpenDetail }) => 
             </span>
           </div>
 
-          {/* Time estimate */}
-          {quest.timeEstimateMinutes && (
-            <div className="flex items-center gap-1 text-[11px] text-slate-400">
-              <Clock className="w-3 h-3 text-slate-500" />
+          {/* Time & Edit/Delete Controls for active user quests */}
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 text-[11px] text-cyan-300 font-mono-stat font-bold bg-[#090d18] px-2 py-0.5 rounded border border-[#1e283f]">
+              <Clock className="w-3 h-3 text-cyan-400" />
               <span>{quest.timeEstimateMinutes}m</span>
             </div>
-          )}
+
+            {!isSuggestion && !isLocked && (
+              <div className="flex items-center gap-0.5">
+                {onEdit && (
+                  <button
+                    onClick={() => {
+                      soundFx.playClick(450);
+                      onEdit(quest);
+                    }}
+                    className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                    title="Edit Task"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
+                <button
+                  onClick={() => {
+                    soundFx.playClick(300);
+                    if (confirm(`Remove "${quest.title}" from your daily adventure?`)) {
+                      deleteQuest(quest.id);
+                    }
+                  }}
+                  className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition"
+                  title="Delete Task"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Quest Title & Icon */}
         <div className="flex items-start gap-3 mb-2">
           <div
-            className={`w-11 h-11 rounded-xl flex items-center justify-center text-2xl shrink-0 ${
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 ${
               isCompleted
                 ? 'bg-emerald-950/70 border border-emerald-700/60'
                 : isInProgress
                 ? 'bg-purple-950/70 border border-purple-600/60 animate-pulse'
+                : isSuggestion
+                ? 'bg-purple-950/80 border border-purple-500/50'
                 : isLocked
                 ? 'bg-slate-900 border border-slate-800'
                 : 'bg-slate-900/80 border border-slate-700/70'
@@ -161,7 +228,11 @@ export const QuestCard: React.FC<QuestCardProps> = ({ quest, onOpenDetail }) => 
             <h3
               onClick={() => onOpenDetail && onOpenDetail(quest)}
               className={`font-rpg font-bold text-base sm:text-lg leading-tight cursor-pointer hover:text-purple-300 transition truncate ${
-                isCompleted ? 'text-emerald-300 line-through' : isLocked ? 'text-slate-500' : 'text-slate-100'
+                isCompleted
+                  ? 'text-emerald-300 line-through'
+                  : isLocked
+                  ? 'text-slate-500'
+                  : 'text-slate-100'
               }`}
             >
               {isLocked ? '??? LOCKED SECRET QUEST' : quest.title}
@@ -174,16 +245,20 @@ export const QuestCard: React.FC<QuestCardProps> = ({ quest, onOpenDetail }) => 
           </div>
         </div>
 
-        {/* Description & Lore */}
+        {/* Description */}
         <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-3">
           {isLocked
             ? quest.secretUnlockRequirement || 'Complete 2-3 quests today to unveil this mystery.'
             : quest.description}
         </p>
 
-        {quest.flavorText && !isLocked && (
-          <div className="bg-[#0c101c]/70 border-l-2 border-purple-500/60 px-2.5 py-1.5 rounded-r-lg mb-3">
-            <p className="text-[11px] text-slate-400 italic">"{quest.flavorText}"</p>
+        {/* Optional Custom Real-Life Reward Pill */}
+        {quest.customReward && !isLocked && (
+          <div className="bg-pink-950/40 border border-pink-700/40 rounded-xl px-2.5 py-1.5 mb-3 flex items-center gap-1.5 text-xs text-pink-300">
+            <Gift className="w-3.5 h-3.5 text-pink-400 shrink-0" />
+            <span className="truncate">
+              <strong>Reward:</strong> {quest.customReward}
+            </span>
           </div>
         )}
       </div>
@@ -202,9 +277,35 @@ export const QuestCard: React.FC<QuestCardProps> = ({ quest, onOpenDetail }) => 
           </span>
         </div>
 
-        {/* Action Button */}
+        {/* Actions */}
         <div className="flex items-center gap-1.5">
-          {isLocked ? (
+          {isSuggestion ? (
+            /* Suggestion Controls: ✓ Add to Quest vs ✕ Not for me */
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => {
+                  soundFx.playClick(350);
+                  rejectSuggestion(quest.id);
+                }}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-rose-950/80 border border-slate-700 hover:border-rose-600 text-slate-400 hover:text-rose-300 text-xs font-semibold flex items-center gap-1 transition"
+                title="Reject Suggestion"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Not for me</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  soundFx.playQuestAccept();
+                  convertSuggestionToActive(quest.id);
+                }}
+                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-glow-xp flex items-center gap-1 transition hover:scale-105"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add to Quest</span>
+              </button>
+            </div>
+          ) : isLocked ? (
             <span className="text-[11px] text-slate-500 font-semibold flex items-center gap-1 px-2.5 py-1 rounded bg-slate-900 border border-slate-800">
               <Lock className="w-3 h-3" />
               Locked
@@ -236,18 +337,18 @@ export const QuestCard: React.FC<QuestCardProps> = ({ quest, onOpenDetail }) => 
           ) : (
             <button
               onClick={() => acceptQuest(quest.id)}
-              className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-extrabold shadow-glow-xp flex items-center gap-1.5 transition hover:scale-105 active:scale-95"
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-extrabold shadow-glow-xp flex items-center gap-1.5 transition hover:scale-105 active:scale-95"
             >
               <Swords className="w-3.5 h-3.5" />
               <span>Accept Quest ⚔️</span>
             </button>
           )}
 
-          {onOpenDetail && (
+          {onOpenDetail && !isSuggestion && (
             <button
               onClick={() => onOpenDetail(quest)}
               className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition"
-              title="View Lore & Details"
+              title="View Lore & Timer"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

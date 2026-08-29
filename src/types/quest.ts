@@ -1,14 +1,24 @@
 export type QuestCategory =
   | 'main'
   | 'side'
-  | 'exploration'
+  | 'study'
+  | 'fitness'
+  | 'personal'
+  | 'fun'
   | 'social'
+  | 'chores'
   | 'creative'
   | 'recovery'
+  | 'exploration'
   | 'random'
-  | 'secret';
+  | 'secret'
+  | 'other';
 
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'epic';
+
+export type PriorityLevel = 'chill' | 'normal' | 'important' | 'must_do';
+
+export type EnergyLevel = 'low' | 'medium' | 'high';
 
 export type QuestStatus = 'available' | 'in_progress' | 'completed' | 'locked';
 
@@ -20,6 +30,8 @@ export interface Quest {
   flavorText: string;
   category: QuestCategory;
   difficulty: Difficulty;
+  priority?: PriorityLevel;
+  energyRequired?: EnergyLevel;
   xpReward: number;
   coinReward: number;
   status: QuestStatus;
@@ -27,7 +39,7 @@ export interface Quest {
   secretUnlockRequirement?: string;
   isMainQuest?: boolean;
   isChaos?: boolean;
-  timeEstimateMinutes?: number;
+  timeEstimateMinutes: number;
   location?: string;
   icon: string;
   completedAt?: string;
@@ -35,6 +47,9 @@ export interface Quest {
   comboType?: 'productivity' | 'social' | 'wellness' | 'exploration' | 'creative';
   steps?: string[];
   currentStepIndex?: number;
+  isUserCreated?: boolean;
+  isSuggestion?: boolean;
+  customReward?: string; // e.g. "30 min YouTube break", "Slice of pizza"
 }
 
 export type AvatarId =
@@ -135,10 +150,16 @@ export interface RandomEvent {
   choices: RandomEventChoice[];
 }
 
+export type VibeType = 'productive' | 'chill' | 'energetic' | 'low_energy' | 'surprise';
+
 export interface DaySetup {
   energy: 'low' | 'normal' | 'high' | 'chaotic';
+  vibe: VibeType;
   goals: string[];
-  freeTime: '30m' | '1h' | '2h' | '4h+';
+  userCustomTasksInput: string;
+  freeTime: '30m' | '1h' | '2h' | '3h' | '4h+' | 'custom';
+  customMinutes?: number;
+  totalAvailableMinutes: number;
   budget: '0' | '100' | '300' | '500+';
   location: 'home' | 'campus' | 'city' | 'other';
   party: 'solo' | 'friends' | 'family' | 'random';

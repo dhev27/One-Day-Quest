@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { XPProgressBar } from '../components/XPProgressBar';
+import { TimeBudgetMeter } from '../components/TimeBudgetMeter';
 import { QuestCard } from '../components/QuestCard';
 import { QuestDetailModal } from '../components/QuestDetailModal';
+import { TaskCreateEditModal } from '../components/TaskCreateEditModal';
 import { Quest } from '../types/quest';
 import { soundFx } from '../utils/sound';
 import {
@@ -22,6 +24,10 @@ import {
   ChevronRight,
   Map as MapIcon,
   Moon,
+  User,
+  Lightbulb,
+  RotateCw,
+  Edit3,
 } from 'lucide-react';
 
 interface DashboardScreenProps {
@@ -37,23 +43,55 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onOpenQuestMas
     triggerRandomEvent,
     setCurrentScreen,
     finishDay,
+    addUserQuest,
+    editQuest,
+    reorderQuest,
+    regenerateSuggestions,
   } = useGame();
 
-  const [activeTab, setActiveTab] = useState<'all' | 'in_progress' | 'available' | 'completed' | 'secret'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'user' | 'suggestions' | 'completed' | 'in_progress'>('all');
   const [selectedQuestForModal, setSelectedQuestForModal] = useState<Quest | null>(null);
 
-  const completedCount = quests.filter((q) => q.status === 'completed').length;
-  const totalCount = quests.length;
+  // Task creation / editing modal state
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState<boolean>(false);
+  const [questToEdit, setQuestToEdit] = useState<Quest | null>(null);
+
+  // Separate user quests from suggestions
+  const userQuests = quests.filter((q) => !q.isSuggestion);
+  const suggestedQuests = quests.filter((q) => q.isSuggestion);
+
+  const completedCount = userQuests.filter((q) => q.status === 'completed').length;
+  const totalCount = userQuests.length;
   const dayProgressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
-  const filteredQuests = quests.filter((q) => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'in_progress') return q.status === 'in_progress';
-    if (activeTab === 'available') return q.status === 'available';
-    if (activeTab === 'completed') return q.status === 'completed';
-    if (activeTab === 'secret') return q.isSecret || q.category === 'secret';
-    return true;
-  });
+  const handleOpenCreateModal = () => {
+    soundFx.playClick(600);
+    setQuestToEdit(null);
+    setIsTaskModalOpen(true);
+  };
+
+  const handleOpenEditModal = (quest: Quest) => {
+    soundFx.playClick(500);
+    setQuestToEdit(quest);
+    setIsTaskModalOpen(true);
+  };
+
+  const handleSaveQuest = (questData: Partial<Quest>) => {
+    if (questToEdit) {
+      editQuest(questToEdit.id, questData);
+    } else {
+      addUserQuest(questData);
+    }
+  };
+
+  // Reorder handlers
+  const handleMoveUp = (idx: number) => {
+    if (idx > 0) reorderQuest(idx, idx - 1);
+  };
+
+  const handleMoveDown = (idx: number) => {
+    if (idx < userQuests.length - 1) reorderQuest(idx, idx + 1);
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-24">
@@ -69,7 +107,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onOpenQuestMas
               <span className="text-xs text-purple-300 font-semibold">{dayTheme}</span>
             </div>
             <h1 className="font-rpg font-black text-2xl sm:text-3xl md:text-4xl text-white">
-              QUEST DASHBOARD ⚔️
+              MY QUEST BOARD ⚔️
             </h1>
           </div>
 
@@ -128,7 +166,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onOpenQuestMas
         <XPProgressBar />
       </div>
 
-      {/* Combo Banner (Requirement 17) */}
+      {/* Time Budget Meter (Requirement 7) */}
+      <TimeBudgetMeter />
+
+      {/* Combo Banner */}
       {combo.active && (
         <div className="mb-6 p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-orange-950/60 via-purple-950/60 to-pink-950/60 border border-orange-500/60 flex items-center justify-between gap-3 shadow-glow-gold/20 animate-pulse">
           <div className="flex items-center gap-3">
@@ -148,88 +189,158 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onOpenQuestMas
         </div>
       )}
 
-      {/* Action Strip: Quest Master, Surprise Encounter, Filter Tabs */}
+      {/* Primary Action Header: ➕ Add Your Own Task & Quick Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-        {/* Filter Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-          {[
-            { id: 'all', label: `All (${quests.length})` },
-            { id: 'in_progress', label: `In Progress (${quests.filter((q) => q.status === 'in_progress').length})` },
-            { id: 'available', label: `Available (${quests.filter((q) => q.status === 'available').length})` },
-            { id: 'completed', label: `Completed (${quests.filter((q) => q.status === 'completed').length})` },
-            { id: 'secret', label: `Secret Vault (${quests.filter((q) => q.isSecret || q.category === 'secret').length})` },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => {
-                soundFx.playClick(450);
-                setActiveTab(tab.id as any);
-              }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition ${
-                activeTab === tab.id
-                  ? 'bg-purple-600 text-white shadow-glow-xp'
-                  : 'bg-[#121829] text-slate-400 hover:text-white border border-[#212d47]'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        {/* Prominent "Add Your Own Task" CTA (Requirement 1) */}
+        <button
+          onClick={handleOpenCreateModal}
+          className="px-5 py-3 rounded-2xl bg-gradient-to-r from-cyan-600 via-indigo-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white font-rpg font-extrabold text-sm shadow-glow-cyan flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition"
+        >
+          <Plus className="w-5 h-5 text-yellow-300" />
+          <span>➕ ADD YOUR OWN TASK</span>
+        </button>
 
-        {/* Quick Actions */}
-        <div className="flex items-center gap-2">
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Summon Quest Master AI */}
           <button
             onClick={() => {
               soundFx.playClick(600);
               onOpenQuestMaster();
             }}
-            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-950 hover:from-indigo-800 hover:to-purple-800 border border-purple-500/50 text-purple-200 text-xs font-bold flex items-center gap-1.5 shadow-sm transition hover:scale-105"
+            className="px-3 py-2 rounded-xl bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-950 hover:from-indigo-800 hover:to-purple-800 border border-purple-500/50 text-purple-200 text-xs font-bold flex items-center gap-1.5 shadow-sm transition hover:scale-105"
           >
             <Wand2 className="w-3.5 h-3.5 text-amber-300 animate-spin" />
             <span>Summon Quests (AI)</span>
           </button>
 
-          {/* Trigger Random Event */}
+          {/* Trigger Surprise Event */}
           <button
             onClick={() => triggerRandomEvent()}
-            className="px-3 py-1.5 rounded-xl bg-red-950/60 hover:bg-red-900/70 border border-red-700/60 text-red-300 text-xs font-bold flex items-center gap-1.5 shadow-sm transition hover:scale-105"
+            className="px-3 py-2 rounded-xl bg-red-950/60 hover:bg-red-900/70 border border-red-700/60 text-red-300 text-xs font-bold flex items-center gap-1.5 shadow-sm transition hover:scale-105"
           >
             <Dices className="w-3.5 h-3.5" />
-            <span>Roll Surprise 🎲</span>
+            <span>Surprise Event 🎲</span>
           </button>
         </div>
       </div>
 
-      {/* Quests Deck Grid */}
-      {filteredQuests.length === 0 ? (
-        <div className="p-12 text-center rounded-3xl bg-[#0f1424] border border-[#212d47] max-w-md mx-auto my-8">
-          <div className="text-4xl mb-3">🌵</div>
-          <h3 className="font-rpg font-bold text-lg text-white mb-1">Your quest board is empty.</h3>
-          <p className="text-xs text-slate-400 mb-5">
-            Even legendary heroes need a new mission to conquer!
-          </p>
+      {/* SECTION 1: 👤 YOUR QUESTS (User Created & Active) (Requirement 4) */}
+      <div className="mb-10">
+        <div className="flex items-center justify-between gap-2 mb-4 pb-2 border-b border-[#1f2c48]">
+          <div className="flex items-center gap-2">
+            <User className="w-5 h-5 text-cyan-400" />
+            <h2 className="font-rpg font-extrabold text-xl text-white">
+              YOUR QUESTS ({userQuests.length})
+            </h2>
+          </div>
+          <span className="text-xs text-slate-400 font-mono-stat">
+            {userQuests.filter((q) => q.status === 'completed').length} / {userQuests.length} Completed
+          </span>
+        </div>
+
+        {userQuests.length === 0 ? (
+          <div className="p-8 text-center rounded-3xl bg-[#0f1424] border border-[#212d47] max-w-lg mx-auto my-4">
+            <div className="text-3xl mb-2">🎯</div>
+            <h3 className="font-rpg font-bold text-base text-white mb-1">
+              You haven't added any personal tasks yet!
+            </h3>
+            <p className="text-xs text-slate-400 mb-4">
+              Click below to enter anything you want to accomplish today.
+            </p>
+            <button
+              onClick={handleOpenCreateModal}
+              className="px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-rpg font-bold text-xs shadow-md transition"
+            >
+              ➕ ADD YOUR FIRST TASK
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            {userQuests.map((quest, idx) => (
+              <QuestCard
+                key={quest.id}
+                quest={quest}
+                onOpenDetail={(q) => {
+                  soundFx.playClick(500);
+                  setSelectedQuestForModal(q);
+                }}
+                onEdit={(q) => handleOpenEditModal(q)}
+                onMoveUp={() => handleMoveUp(idx)}
+                onMoveDown={() => handleMoveDown(idx)}
+                isFirst={idx === 0}
+                isLast={idx === userQuests.length - 1}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 2: ✨ QUEST SUGGESTIONS (AI Generated) (Requirement 4, 5, 6) */}
+      <div className="mb-10 p-5 sm:p-6 rounded-3xl bg-[#0f1222] border border-purple-800/40 relative">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-2 border-b border-[#212c47]">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-yellow-300 animate-spin" />
+            <div>
+              <h2 className="font-rpg font-extrabold text-lg sm:text-xl text-purple-200">
+                QUEST SUGGESTIONS ({suggestedQuests.length})
+              </h2>
+              <p className="text-xs text-slate-400">
+                AI suggests. <strong>YOU decide.</strong> Add suggestions or reject them as you wish.
+              </p>
+            </div>
+          </div>
+
+          {/* Regenerate Suggestions Button (Requirement 6) */}
           <button
-            onClick={onOpenQuestMaster}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-rpg font-bold text-xs shadow-glow-xp"
+            onClick={regenerateSuggestions}
+            className="px-3.5 py-1.5 rounded-xl bg-purple-950/80 hover:bg-purple-900 border border-purple-600/60 text-purple-200 text-xs font-bold flex items-center gap-1.5 shadow-sm transition hover:scale-105 self-start sm:self-auto"
           >
-            SUMMON NEW QUESTS WITH AI ⚔️
+            <RotateCw className="w-3.5 h-3.5 text-yellow-400" />
+            <span>🎲 Give Me Different Ideas</span>
           </button>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 mb-10">
-          {filteredQuests.map((quest) => (
-            <QuestCard
-              key={quest.id}
-              quest={quest}
-              onOpenDetail={(q) => {
-                soundFx.playClick(500);
-                setSelectedQuestForModal(q);
-              }}
-            />
-          ))}
-        </div>
-      )}
+
+        {suggestedQuests.length === 0 ? (
+          /* Edge case when all suggestions rejected (Requirement 11) */
+          <div className="p-6 text-center rounded-2xl bg-[#090c17] border border-[#1b253b] max-w-md mx-auto my-2">
+            <div className="text-3xl mb-2">😎</div>
+            <h3 className="font-rpg font-bold text-sm text-white mb-1">
+              Nothing feels right? Build your own quest!
+            </h3>
+            <p className="text-xs text-slate-400 mb-4">
+              You've cleared all suggestions. Add your own tasks or generate a fresh batch.
+            </p>
+            <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={handleOpenCreateModal}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-white font-bold text-xs shadow-md transition"
+              >
+                ➕ Add Your Own Task
+              </button>
+              <button
+                onClick={regenerateSuggestions}
+                className="px-3.5 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white font-bold text-xs transition"
+              >
+                🎲 New Suggestions
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            {suggestedQuests.map((quest) => (
+              <QuestCard
+                key={quest.id}
+                quest={quest}
+                onOpenDetail={(q) => {
+                  soundFx.playClick(500);
+                  setSelectedQuestForModal(q);
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Adventure Map Teaser Banner */}
       <div
@@ -254,7 +365,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onOpenQuestMas
               View Your Adventure World Map
             </h4>
             <p className="text-xs text-slate-400">
-              Track your daily journey from Morning Gate to Night Sanctuary.
+              Track your journey through today's territory.
             </p>
           </div>
         </div>
@@ -280,6 +391,14 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onOpenQuestMas
       <QuestDetailModal
         quest={selectedQuestForModal}
         onClose={() => setSelectedQuestForModal(null)}
+      />
+
+      {/* Task Create / Edit Modal (Requirement 1, 2, 8) */}
+      <TaskCreateEditModal
+        isOpen={isTaskModalOpen}
+        onClose={() => setIsTaskModalOpen(false)}
+        onSave={handleSaveQuest}
+        initialQuest={questToEdit}
       />
     </div>
   );

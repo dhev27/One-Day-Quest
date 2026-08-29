@@ -1,4 +1,4 @@
-import { DaySetup, MapNode, Quest } from '../types/quest';
+import { DaySetup, MapNode, Quest, VibeType, EnergyLevel, PriorityLevel } from '../types/quest';
 
 const THEME_NAMES = [
   'Operation: Get Your Life Together',
@@ -17,242 +17,281 @@ export function getRandomDayTheme(): string {
   return THEME_NAMES[Math.floor(Math.random() * THEME_NAMES.length)];
 }
 
-export function generateQuestsForDay(setup: DaySetup): { quests: Quest[]; mapNodes: MapNode[]; theme: string } {
-  const theme = setup.dayThemeName || getRandomDayTheme();
-  const quests: Quest[] = [];
-
-  // 1. Generate MAIN QUEST based on primary goal & energy
-  let mainTitle = 'DEFEAT THE PROMETHEUS BOSS';
-  let mainSubtitle = 'Ultimate Daily Victory';
-  let mainDesc = 'Complete your primary objective for the day without surrender.';
-  let mainSteps = ['Set up your focus battleground', 'Sprint for 50 minutes', 'Review and seal the achievement'];
-  let mainIcon = '🐉';
-
-  if (setup.goals.includes('Study')) {
-    mainTitle = 'CONQUER THE EXAM CITADEL';
-    mainSubtitle = 'High-Stakes Study Sprint';
-    mainDesc = 'Tackle your heaviest subject or hardest homework set for at least 60 solid minutes.';
-    mainSteps = ['Clear desk of distractions', 'Finish 3 hardest concept summaries', 'Run 1 practice problem set'];
-    mainIcon = '📚';
-  } else if (setup.goals.includes('Project')) {
-    mainTitle = 'FORGE THE MASTERPIECE';
-    mainSubtitle = 'Build & Deploy';
-    mainDesc = 'Ship the core milestone of your project, write clean code, and test the key user path.';
-    mainSteps = ['Code core functionality', 'Fix lingering bugs', 'Test demo flow'];
-    mainIcon = '💻';
-  } else if (setup.goals.includes('Fitness')) {
-    mainTitle = 'TITAN TRAINING PROTOCOL';
-    mainSubtitle = 'Physical Ascendance';
-    mainDesc = 'Complete an intense workout, run 3-5 km, or hit PRs in the gym.';
-    mainSteps = ['Dynamic warmup & stretch', 'Complete main exercise sets', 'Hydrate and cool down'];
-    mainIcon = '⚡';
-  } else if (setup.goals.includes('Social')) {
-    mainTitle = 'THE TAVERN SUMMIT';
-    mainSubtitle = 'Host or Lead the Party';
-    mainDesc = 'Organize an unforgettable hangout, dinner, or game night with your squad.';
-    mainSteps = ['Send out party invite', 'Pick legendary spot', 'Create lasting memories'];
-    mainIcon = '🍻';
-  } else if (setup.goals.includes('Creative')) {
-    mainTitle = 'THE SPARK OF GENIUS';
-    mainSubtitle = 'Unleash Original Art';
-    mainDesc = 'Produce a finished piece of writing, illustration, design, or music track.';
-    mainSteps = ['Draft messy outline', 'Refine core structure', 'Polish final deliverable'];
-    mainIcon = '🎨';
+export function parseFreeTimeToMinutes(freeTime: DaySetup['freeTime'], customMinutes?: number): number {
+  if (customMinutes && customMinutes > 0) return customMinutes;
+  switch (freeTime) {
+    case '30m': return 30;
+    case '1h': return 60;
+    case '2h': return 120;
+    case '3h': return 180;
+    case '4h+': return 240;
+    case 'custom': return customMinutes || 60;
+    default: return 120;
   }
+}
 
-  // Calculate XP based on energy
-  const mainXp = setup.energy === 'chaotic' ? 400 : setup.energy === 'high' ? 350 : setup.energy === 'normal' ? 300 : 250;
+// Parse free-form user task input into discrete quest objects
+export function parseUserTasksInput(text: string): Quest[] {
+  if (!text || !text.trim()) return [];
 
-  quests.push({
-    id: `quest-main-${Date.now()}`,
-    title: mainTitle,
-    subtitle: mainSubtitle,
-    description: mainDesc,
-    flavorText: 'The main storyline chapter that defines your legacy today.',
-    category: 'main',
-    difficulty: 'epic',
-    xpReward: mainXp,
-    coinReward: 80,
-    status: 'available',
-    isMainQuest: true,
-    timeEstimateMinutes: setup.freeTime === '30m' ? 30 : setup.freeTime === '1h' ? 50 : 75,
-    location: setup.location === 'home' ? 'Home Citadel' : 'Campus War Room',
-    icon: mainIcon,
-    comboType: 'productivity',
-    steps: mainSteps,
-    currentStepIndex: 0,
+  // Split by newlines or commas or bullets
+  const lines = text
+    .split(/[\n,;•]+/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 2);
+
+  return lines.map((line, idx) => {
+    const cleanTitle = line.replace(/^[-\d.)\s]+/, '').trim();
+    let category: Quest['category'] = 'personal';
+    let icon = '🎯';
+    let duration = 45;
+    let priority: PriorityLevel = 'important';
+    let energy: EnergyLevel = 'medium';
+
+    const lower = cleanTitle.toLowerCase();
+    if (lower.includes('study') || lower.includes('assign') || lower.includes('dsa') || lower.includes('exam') || lower.includes('read') || lower.includes('code')) {
+      category = 'study';
+      icon = '📚';
+      duration = 45;
+      priority = 'important';
+      energy = 'medium';
+    } else if (lower.includes('volleyball') || lower.includes('workout') || lower.includes('gym') || lower.includes('run') || lower.includes('walk') || lower.includes('fitness')) {
+      category = 'fitness';
+      icon = '🏐';
+      duration = 45;
+      priority = 'normal';
+      energy = 'high';
+    } else if (lower.includes('mom') || lower.includes('call') || lower.includes('friend') || lower.includes('meet') || lower.includes('text')) {
+      category = 'social';
+      icon = '💬';
+      duration = 30;
+      priority = 'important';
+      energy = 'low';
+    } else if (lower.includes('clean') || lower.includes('desk') || lower.includes('room') || lower.includes('wash') || lower.includes('laundry')) {
+      category = 'chores';
+      icon = '🧹';
+      duration = 30;
+      priority = 'normal';
+      energy = 'low';
+    } else if (lower.includes('episode') || lower.includes('watch') || lower.includes('game') || lower.includes('movie') || lower.includes('anime')) {
+      category = 'fun';
+      icon = '🎮';
+      duration = 45;
+      priority = 'chill';
+      energy = 'low';
+    }
+
+    const xp = Math.min(250, Math.max(50, duration * 2 + (priority === 'must_do' ? 50 : 25)));
+    const coins = Math.round(xp * 0.3);
+
+    return {
+      id: `user-task-${Date.now()}-${idx}`,
+      title: cleanTitle.toUpperCase(),
+      subtitle: 'Your Personal Objective',
+      description: `Complete your self-assigned task: "${cleanTitle}".`,
+      flavorText: 'A warrior defines their own battlefield.',
+      category,
+      difficulty: duration >= 60 ? 'hard' : duration >= 45 ? 'medium' : 'easy',
+      priority,
+      energyRequired: energy,
+      xpReward: xp,
+      coinReward: coins,
+      status: 'available',
+      isUserCreated: true,
+      timeEstimateMinutes: duration,
+      icon,
+      comboType: category === 'study' ? 'productivity' : category === 'social' ? 'social' : 'wellness',
+      customReward: 'Sense of glory & free time unlocked',
+    };
   });
+}
 
-  // 2. SIDE QUEST 1 - Focus / Productivity
-  quests.push({
-    id: `quest-side-1-${Date.now()}`,
-    title: 'KNOWLEDGE DUNGEON SPRINT',
-    subtitle: 'Deep Focus Chamber',
-    description: 'Survive 35 minutes of uninterrupted work without switching to social media feeds.',
-    flavorText: 'The doomscroll sirens will try to lure you. Stay on target.',
-    category: 'side',
-    difficulty: 'medium',
-    xpReward: 100,
-    coinReward: 30,
-    status: 'available',
-    timeEstimateMinutes: 35,
-    location: 'Study Chamber',
-    icon: '⚡',
-    comboType: 'productivity',
-  });
+// Pool of smart suggestions categorized by vibe and duration
+export interface SuggestionTemplate {
+  id: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  flavorText: string;
+  category: Quest['category'];
+  duration: number; // in minutes
+  energy: EnergyLevel;
+  vibe: VibeType[];
+  icon: string;
+  priority: PriorityLevel;
+}
 
-  // 3. RECOVERY QUEST - Wellness / Health
-  quests.push({
-    id: `quest-rec-1-${Date.now()}`,
-    title: 'THE ALCHEMIST’S HYDRATION RITUAL',
-    subtitle: 'Vitality Restoration',
-    description: 'Down 500ml of water, step outside into fresh air, and take 10 deep belly breaths.',
-    flavorText: 'Your stamina bar is recharging. Clean fuel restores maximum MP.',
+const SUGGESTION_POOL: SuggestionTemplate[] = [
+  {
+    id: 'sug-walk-20',
+    title: 'THE 20-MINUTE UNPLUGGED EXPEDITION',
+    subtitle: 'Outdoor Vitality',
+    description: 'Go for a 20-minute walk outside without checking phone notifications.',
+    flavorText: 'Natural sunlight restores 40% of baseline mental mana.',
+    category: 'fitness',
+    duration: 30,
+    energy: 'low',
+    vibe: ['chill', 'low_energy', 'surprise', 'productive'],
+    icon: '🚶',
+    priority: 'normal',
+  },
+  {
+    id: 'sug-focus-sprint',
+    title: 'KNOWLEDGE DUNGEON FOCUS SPRINT',
+    subtitle: 'High Velocity Deep Work',
+    description: 'Conquer 45 minutes of pure uninterrupted deep focus on your hardest study/work item.',
+    flavorText: 'The distraction monster is powerless against a ticking chrono.',
+    category: 'study',
+    duration: 45,
+    energy: 'high',
+    vibe: ['productive', 'energetic'],
+    icon: '📚',
+    priority: 'important',
+  },
+  {
+    id: 'sug-room-reset',
+    title: 'THE 15-MINUTE SANCTUARY RESET',
+    subtitle: 'Environment Clarity',
+    description: 'Clear desk clutter, make the bed, and organize your work arena.',
+    flavorText: 'An orderly chamber grants +20% focus aura.',
+    category: 'chores',
+    duration: 30,
+    energy: 'low',
+    vibe: ['chill', 'low_energy', 'productive', 'surprise'],
+    icon: '🧹',
+    priority: 'normal',
+  },
+  {
+    id: 'sug-stretch-meditate',
+    title: 'HP POTION & 15-MIN MINDFUL REST',
+    subtitle: 'Stamina Reboot',
+    description: 'Drink a tall glass of cold water and do full-body stretches or breathing.',
+    flavorText: 'Cooldown phases prevent hero burnouts.',
     category: 'recovery',
-    difficulty: 'easy',
-    xpReward: 60,
-    coinReward: 15,
-    status: 'available',
-    timeEstimateMinutes: 10,
-    location: 'Water Oasis',
-    icon: '💧',
-    comboType: 'wellness',
-  });
-
-  // 4. EXPLORATION QUEST - Location/Budget contextual
-  let expTitle = 'UNCHARTED TERRITORY';
-  let expDesc = 'Walk down a hallway, street, or route you have never walked before.';
-  let expLoc = 'Unknown Perimeter';
-
-  if (setup.location === 'campus') {
-    expTitle = 'CAMPUS FOG OF WAR';
-    expDesc = 'Visit a building or floor on campus you have never stepped into and take a mental note.';
-    expLoc = 'Hidden Campus Wing';
-  } else if (setup.location === 'city') {
-    expTitle = 'URBAN EXPEDITION';
-    expDesc = 'Check out an unfamiliar alleyway, bookshop, or small café within walking distance.';
-    expLoc = 'Downtown Grid';
-  } else {
-    expTitle = 'PERIMETER SCOUT';
-    expDesc = 'Step outside and do a 15-minute reconnaissance walk around your neighborhood without your phone in hand.';
-    expLoc = 'Outer Ring';
-  }
-
-  quests.push({
-    id: `quest-exp-1-${Date.now()}`,
-    title: expTitle,
-    subtitle: 'Discovery & Map Reveal',
-    description: expDesc,
-    flavorText: '80% of the world remains unexplored until you look up from your screen.',
+    duration: 30,
+    energy: 'low',
+    vibe: ['chill', 'low_energy', 'surprise'],
+    icon: '🧘',
+    priority: 'chill',
+  },
+  {
+    id: 'sug-social-npc',
+    title: 'NPC ENCOUNTER: SEND A WHOLESOME MEME',
+    subtitle: 'Squad Synchrony',
+    description: 'Text a friend or family member a meme or quick check-in.',
+    flavorText: 'Party morale directly boosts daily luck stats.',
+    category: 'social',
+    duration: 30,
+    energy: 'low',
+    vibe: ['chill', 'energetic', 'surprise'],
+    icon: '💬',
+    priority: 'chill',
+  },
+  {
+    id: 'sug-creative-doodle',
+    title: 'THE 20-MINUTE CREATIVE SPARK',
+    subtitle: 'Artistic Alchemy',
+    description: 'Sketch, write, record, or create something original for 20 minutes without judging the result.',
+    flavorText: 'Creation is magic cast into the physical realm.',
+    category: 'creative',
+    duration: 30,
+    energy: 'medium',
+    vibe: ['productive', 'energetic', 'surprise'],
+    icon: '🎨',
+    priority: 'normal',
+  },
+  {
+    id: 'sug-campus-explore',
+    title: 'CAMPUS FOG OF WAR: UNCHARTED ROUTE',
+    subtitle: 'Exploration Discovery',
+    description: 'Take a completely different path or enter a building you never visited.',
+    flavorText: '80% of your surroundings remain undocumented in your memory.',
     category: 'exploration',
-    difficulty: 'medium',
-    xpReward: 120,
-    coinReward: 35,
-    status: 'available',
-    timeEstimateMinutes: 20,
-    location: expLoc,
+    duration: 30,
+    energy: 'medium',
+    vibe: ['energetic', 'surprise'],
     icon: '🧭',
-    comboType: 'exploration',
+    priority: 'normal',
+  },
+  {
+    id: 'sug-power-workout',
+    title: 'TITAN STRENGTH CHALLENGE',
+    subtitle: 'Physical Ascendance',
+    description: 'Hit a solid workout or 3 sets of pushups, squats & core.',
+    flavorText: 'Physical training forges unbreakable resolve.',
+    category: 'fitness',
+    duration: 45,
+    energy: 'high',
+    vibe: ['energetic', 'productive'],
+    icon: '⚡',
+    priority: 'important',
+  },
+];
+
+export function generateSmartSuggestions(
+  remainingMinutes: number,
+  vibe: VibeType = 'productive',
+  rejectedIds: string[] = []
+): Quest[] {
+  // Filter out rejected suggestions
+  let pool = SUGGESTION_POOL.filter((item) => !rejectedIds.includes(item.id));
+
+  // If pool is empty, reset filter
+  if (pool.length === 0) pool = SUGGESTION_POOL;
+
+  // Filter based on remaining time if reasonable
+  let candidates = pool.filter((item) => item.duration <= Math.max(remainingMinutes, 30));
+  if (candidates.length < 2) candidates = pool;
+
+  // Shuffle and pick 2-3 suggestions
+  const shuffled = candidates.sort(() => 0.5 - Math.random());
+  const selected = shuffled.slice(0, Math.min(3, shuffled.length));
+
+  return selected.map((sug) => {
+    const xp = sug.duration >= 45 ? 120 : 70;
+    const coins = Math.round(xp * 0.3);
+
+    return {
+      id: `sug-${sug.id}-${Date.now()}`,
+      title: sug.title,
+      subtitle: sug.subtitle,
+      description: sug.description,
+      flavorText: sug.flavorText,
+      category: sug.category,
+      difficulty: sug.duration >= 45 ? 'medium' : 'easy',
+      priority: sug.priority,
+      energyRequired: sug.energy,
+      xpReward: xp,
+      coinReward: coins,
+      status: 'available',
+      isSuggestion: true,
+      timeEstimateMinutes: sug.duration,
+      icon: sug.icon,
+      comboType: sug.category === 'fitness' ? 'wellness' : 'productivity',
+    };
   });
+}
 
-  // 5. SOCIAL QUEST - Party contextual
-  if (setup.party === 'friends') {
-    quests.push({
-      id: `quest-soc-1-${Date.now()}`,
-      title: 'CO-OP PARTY BUFF',
-      subtitle: 'Comrade Synchrony',
-      description: 'Exchange a compliment or collaborate on solving a problem with a teammate.',
-      flavorText: 'Party synergy adds +25% luck to all upcoming rolls.',
-      category: 'social',
-      difficulty: 'easy',
-      xpReward: 80,
-      coinReward: 25,
-      status: 'available',
-      timeEstimateMinutes: 15,
-      location: 'Guild Hall',
-      icon: '🤝',
-      comboType: 'social',
-    });
-  } else {
-    quests.push({
-      id: `quest-soc-1-${Date.now()}`,
-      title: 'NPC INTERACTION PROTOCOL',
-      subtitle: 'Social Radar Check',
-      description: 'Text someone you haven’t spoken to this week or ask a barista/classmate how their day is going.',
-      flavorText: 'Random NPCs often drop rare lore and unexpected smile buffs.',
-      category: 'social',
-      difficulty: 'easy',
-      xpReward: 80,
-      coinReward: 25,
-      status: 'available',
-      timeEstimateMinutes: 5,
-      location: 'The Crossroads',
-      icon: '💬',
-      comboType: 'social',
-    });
-  }
+export function generateQuestsForDay(setup: DaySetup): {
+  userQuests: Quest[];
+  suggestedQuests: Quest[];
+  mapNodes: MapNode[];
+  theme: string;
+} {
+  const theme = setup.dayThemeName || getRandomDayTheme();
+  const totalMinutes = setup.totalAvailableMinutes || parseFreeTimeToMinutes(setup.freeTime, setup.customMinutes);
 
-  // 6. CHAOS QUEST (If chaos mode is enabled or chaotic energy)
-  if (setup.chaosMode || setup.energy === 'chaotic') {
-    const chaosPool = [
-      {
-        title: 'CHAOS CARD: THE STRANGE QUESTION',
-        desc: 'Ask a friend or classmate the weirdest harmless question you can think of (e.g., "Would you fight 100 duck-sized horses?").',
-        icon: '🎭',
-      },
-      {
-        title: 'CHAOS CARD: MYSTERY SNACK TASTING',
-        desc: 'Try a completely unfamiliar flavor of snack or drink today and rate it out of 10.',
-        icon: '🍬',
-      },
-      {
-        title: 'CHAOS CARD: RANDOM PHOTO CHALLENGE',
-        desc: 'Take a photo of the most absurd or funny thing you notice in your surroundings today.',
-        icon: '📸',
-      },
-    ];
-    const pickedChaos = chaosPool[Math.floor(Math.random() * chaosPool.length)];
+  // 1. Parse User's own tasks first
+  const userQuests = parseUserTasksInput(setup.userCustomTasksInput);
 
-    quests.push({
-      id: `quest-chaos-${Date.now()}`,
-      title: pickedChaos.title,
-      subtitle: 'Unhinged Adventure Element',
-      description: pickedChaos.desc,
-      flavorText: 'The Chaos Gods are watching and eagerly awaiting your move.',
-      category: 'random',
-      difficulty: 'medium',
-      xpReward: 110,
-      coinReward: 40,
-      status: 'available',
-      isChaos: true,
-      timeEstimateMinutes: 15,
-      location: 'Wild Wild Realm',
-      icon: pickedChaos.icon,
-      comboType: 'creative',
-    });
-  }
+  // Calculate used time by user quests
+  const userMinutesUsed = userQuests.reduce((sum, q) => sum + (q.timeEstimateMinutes || 45), 0);
+  const remainingMinutes = Math.max(0, totalMinutes - userMinutesUsed);
 
-  // 7. SECRET QUEST (Starts locked, unlocks after 2 completed quests)
-  quests.push({
-    id: `quest-secret-${Date.now()}`,
-    title: 'THE GOLDEN MOMENT OF LEGEND',
-    subtitle: 'Mysterious Locked Scroll',
-    description: 'Perform one act of spontaneous generosity or capture a snapshot you will cherish a year from now.',
-    flavorText: 'An iridescent seal pulses with ancient magical runes...',
-    category: 'secret',
-    difficulty: 'hard',
-    xpReward: 200,
-    coinReward: 70,
-    status: 'locked',
-    isSecret: true,
-    secretUnlockRequirement: 'Complete any 2 quests to crack the seal',
-    timeEstimateMinutes: 20,
-    location: 'Secret Chamber',
-    icon: '🔒',
-    comboType: 'wellness',
-  });
+  // 2. Generate smart suggestions fitting the remaining time & vibe
+  const suggestedQuests = generateSmartSuggestions(remainingMinutes, setup.vibe);
 
-  // Generate Map Nodes
+  // 3. Map Nodes
   const mapNodes: MapNode[] = [
     {
       id: 'node-1',
@@ -266,55 +305,45 @@ export function generateQuestsForDay(setup: DaySetup): { quests: Quest[]; mapNod
     },
     {
       id: 'node-2',
-      name: 'KNOWLEDGE TOWER',
-      subtitle: 'Study & Mental Focus',
+      name: 'HERO’S FOCUS TOWER',
+      subtitle: 'Primary Task Chamber',
       icon: '📚',
       type: 'dungeon',
       status: 'current',
       xpReward: 100,
-      lore: 'High towers of wisdom where distractions are banished.',
+      lore: 'High towers of concentration where excuses are slain.',
     },
     {
       id: 'node-3',
-      name: 'ALCHEMIST’S REST',
+      name: 'REST OASIS',
       subtitle: 'HP & Stamina Refill',
       icon: '💧',
       type: 'camp',
       status: 'locked',
       xpReward: 60,
-      lore: 'Clear spring waters and quiet moments beneath the pines.',
+      lore: 'Cool spring water and moment of recovery.',
     },
     {
       id: 'node-4',
-      name: 'WANDERER’S GROVE',
-      subtitle: 'Territory Discovery',
-      icon: '🌲',
-      type: 'forest',
-      status: 'locked',
-      xpReward: 120,
-      lore: 'Sunlight filters through uncharted branches.',
-    },
-    {
-      id: 'node-5',
-      name: 'THE CITADEL CLIMAX',
-      subtitle: 'The Boss Encounter',
+      name: 'CITADEL CLIMAX',
+      subtitle: 'Day Conquest',
       icon: '🏰',
       type: 'boss',
       status: 'locked',
-      xpReward: mainXp,
-      lore: 'The ultimate climax of your day. Triumph and glory await.',
+      xpReward: 250,
+      lore: 'The climax of your day. Victory and XP await.',
     },
     {
-      id: 'node-6',
+      id: 'node-5',
       name: 'NIGHT OF GLORY',
-      subtitle: 'Tavern Celebration',
+      subtitle: 'Tavern Celebration & Score',
       icon: '🌙',
       type: 'kingdom',
       status: 'locked',
       xpReward: 100,
-      lore: 'Raise your goblets. Another day conquered in style.',
+      lore: 'Tally your coins, review your score, and rest well.',
     },
   ];
 
-  return { quests, mapNodes, theme };
+  return { userQuests, suggestedQuests, mapNodes, theme };
 }
