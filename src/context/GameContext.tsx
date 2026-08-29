@@ -65,6 +65,9 @@ interface GameContextType {
   rejectSuggestion: (suggestionId: string) => void;
   regenerateSuggestions: () => void;
   trimQuestsToFitTime: () => void;
+  optimizeQuest: () => void;
+  rebuildQuest: () => void;
+  handlePlanChanged: (changeType: 'less_time' | 'more_time' | 'energy_changed' | 'add_task' | 'remove_task') => void;
 
   // Time & Budget Management
   totalAvailableTimeMinutes: number;
@@ -101,6 +104,7 @@ interface GameContextType {
 
   // Combos
   combo: ComboInfo;
+  triggerCompanionReaction: (type: 'quest-start' | 'quest-complete' | 'quest-skip-hover' | 'quest-skip' | 'reward-open') => void;
 
   // Shop & Inventory
   shopItems: ShopItem[];
@@ -215,6 +219,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     soundFx.playClick(next ? 700 : 400);
   };
 
+  const triggerCompanionReaction = (type: 'quest-start' | 'quest-complete' | 'quest-skip-hover' | 'quest-skip' | 'reward-open') => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('companion-event', { detail: { type } }));
+    }
+  };
+
   // Add XP and handle level up
   const addXpAndCoins = (xpGain: number, coinGain: number) => {
     setPlayer((prev) => {
@@ -255,6 +265,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const acceptQuest = (questId: string) => {
     soundFx.playQuestAccept();
+    triggerCompanionReaction('quest-start');
     setQuests((prev) =>
       prev.map((q) => (q.id === questId ? { ...q, status: 'in_progress' } : q))
     );
@@ -297,6 +308,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       xpGained: target.xpReward,
       coinsGained: target.coinReward,
     });
+    triggerCompanionReaction('quest-complete');
 
     // Advance Map Nodes
     setMapNodes((prevNodes) => {
@@ -333,6 +345,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const abandonQuest = (questId: string) => {
     soundFx.playClick(350);
+    triggerCompanionReaction('quest-skip');
     setQuests((prev) =>
       prev.map((q) => (q.id === questId ? { ...q, status: 'available' } : q))
     );
@@ -410,16 +423,80 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Regenerate Suggestions (Requirement 6)
   const regenerateSuggestions = () => {
     soundFx.playClick(600);
-    // Remove existing suggestions
     const nonSuggestions = quests.filter((q) => !q.isSuggestion);
-
-    // Calculate remaining time
     const usedTime = nonSuggestions.reduce((sum, q) => sum + (q.timeEstimateMinutes || 30), 0);
     const remaining = Math.max(0, totalAvailableTimeMinutes - usedTime);
-
-    // Generate fresh suggestions
-    const fresh = generateSmartSuggestions(remaining, userVibe, rejectedSuggestionIds);
+    const fresh = generateSmartSuggestions(
+      remaining,
+      userVibe,
+      rejectedSuggestionIds,
+      daySetup?.energy || 'normal',
+      nonSuggestions
+    );
     setQuests([...nonSuggestions, ...fresh]);
+  };
+
+  const optimizeQuest = () => {
+    soundFx.playClick(500);
+    const nonSuggestions = quests.filter((q) => !q.isSuggestion);
+    const usedTime = nonSuggestions.reduce((sum, q) => sum + (q.timeEstimateMinutes || 30), 0);
+    if (usedTime <= totalAvailableTimeMinutes) {
+      setAllowOvertime(false);
+      return;
+    }
+
+    const sorted = [...nonSuggestions].sort((a, b) => {
+      const priorityWeight = { must_do: 4, important: 3, normal: 2, chill: 1 };
+      return (priorityWeight[b.priority || 'normal'] || 0) - (priorityWeight[a.priority || 'normal'] || 0);
+    });
+
+    const optimized: Quest[] = [];
+    let total = 0;
+
+    for (const quest of sorted) {
+      const dur = quest.timeEstimateMinutes || 30;
+      const keep = quest.priority === 'must_do' || quest.priority === 'important';
+      if (keep && total + dur <= totalAvailableTimeMinutes) {
+        optimized.push(quest);
+        total += dur;
+      } else if (!keep && total + dur <= totalAvailableTimeMinutes) {
+        optimized.push(quest);
+        total += dur;
+      }
+    }
+
+    if (optimized.length === 0) {
+      const shortest = sorted.sort((a, b) => (a.timeEstimateMinutes || 30) - (b.timeEstimateMinutes || 30))[0];
+      if (shortest) optimized.push(shortest);
+    }
+
+    const remaining = Math.max(0, totalAvailableTimeMinutes - optimized.reduce((sum, q) => sum + (q.timeEstimateMinutes || 30), 0));
+    const fresh = generateSmartSuggestions(remaining, userVibe, rejectedSuggestionIds, daySetup?.energy || 'normal', optimized);
+    setQuests([...optimized, ...fresh]);
+    setAllowOvertime(false);
+  };
+
+  const rebuildQuest = () => {
+    soundFx.playClick(600);
+    const nonSuggestions = quests.filter((q) => !q.isSuggestion);
+    const usedTime = nonSuggestions.reduce((sum, q) => sum + (q.timeEstimateMinutes || 30), 0);
+    const remaining = Math.max(0, totalAvailableTimeMinutes - usedTime);
+    const fresh = generateSmartSuggestions(remaining, userVibe, rejectedSuggestionIds, daySetup?.energy || 'normal', nonSuggestions);
+    setQuests([...nonSuggestions, ...fresh]);
+  };
+
+  const handlePlanChanged = (changeType: 'less_time' | 'more_time' | 'energy_changed' | 'add_task' | 'remove_task') => {
+    soundFx.playClick(500);
+    if (changeType === 'less_time') {
+      setTotalAvailableTimeMinutes(Math.max(15, totalAvailableTimeMinutes - 30));
+    }
+    if (changeType === 'more_time') {
+      setTotalAvailableTimeMinutes(Math.min(240, totalAvailableTimeMinutes + 30));
+    }
+    if (changeType === 'energy_changed') {
+      setUserVibe(daySetup?.energy === 'low' ? 'low_energy' : 'productive');
+    }
+    setTimeout(() => rebuildQuest(), 120);
   };
 
   // Trim Quests to fit time (Requirement 11)
@@ -656,6 +733,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         rejectSuggestion,
         regenerateSuggestions,
         trimQuestsToFitTime,
+        optimizeQuest,
+        rebuildQuest,
+        handlePlanChanged,
         totalAvailableTimeMinutes,
         setTotalAvailableTimeMinutes,
         userVibe,
@@ -678,6 +758,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         resolveRandomEventChoice,
         closeRandomEvent,
         combo,
+        triggerCompanionReaction,
         shopItems,
         achievements,
         buyItem,

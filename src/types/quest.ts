@@ -50,6 +50,7 @@ export interface Quest {
   isUserCreated?: boolean;
   isSuggestion?: boolean;
   customReward?: string; // e.g. "30 min YouTube break", "Slice of pizza"
+  reason?: string;
 }
 
 export type AvatarId =
@@ -157,7 +158,7 @@ export interface DaySetup {
   vibe: VibeType;
   goals: string[];
   userCustomTasksInput: string;
-  freeTime: '30m' | '1h' | '2h' | '3h' | '4h+' | 'custom';
+  freeTime: '15m' | '30m' | '45m' | '1h' | '1h 30m' | '2h' | '3h' | '4h+' | 'custom';
   customMinutes?: number;
   totalAvailableMinutes: number;
   budget: '0' | '100' | '300' | '500+';

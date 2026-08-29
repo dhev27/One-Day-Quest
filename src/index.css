@@ -2,67 +2,175 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: light;
+  --page-bg: #f5f7fb;
+  --panel-bg: rgba(255, 255, 255, 0.78);
+  --panel-strong: #ffffff;
+  --soft-border: rgba(148, 163, 184, 0.25);
+  --text: #0f172a;
+  --muted: #475569;
+  --primary: #6d5ef2;
+  --accent: #f59e0b;
+  --success: #10b981;
+}
+
 @layer base {
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
   body {
-    background-color: #07090e;
-    color: #f1f5f9;
-    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin: 0;
+    background:
+      radial-gradient(circle at top left, rgba(167, 139, 250, 0.18), transparent 30%),
+      radial-gradient(circle at top right, rgba(251, 191, 36, 0.14), transparent 25%),
+      var(--page-bg);
+    color: var(--text);
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
 
-  h1, h2, h3, .font-rpg {
+  h1, h2, h3, h4, .font-rpg {
     font-family: 'Cinzel', serif, system-ui;
+    letter-spacing: -0.02em;
   }
 
   .font-mono-stat {
     font-family: 'Space Grotesk', monospace;
   }
+
+  button, input, textarea, select {
+    font: inherit;
+  }
 }
 
-/* Custom RPG Scrollbar */
+.app-shell {
+  background: transparent;
+}
+
+.quest-card-surface {
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.quest-card-surface:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.08);
+}
+
+.reward-reveal {
+  animation: reveal-reward 400ms ease;
+}
+
+@keyframes reveal-reward {
+  0% { transform: scale(0.92) rotateX(-16deg); opacity: 0; }
+  60% { transform: scale(1.04) rotateX(6deg); opacity: 1; }
+  100% { transform: scale(1) rotateX(0); opacity: 1; }
+}
+
+.companion-widget {
+  filter: drop-shadow(0 18px 40px rgba(109, 94, 242, 0.18));
+}
+
+.companion-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.companion-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0));
+  pointer-events: none;
+}
+
+.companion-avatar {
+  position: relative;
+  display: flex;
+  height: 60px;
+  width: 60px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 22px;
+  border: 2px solid rgba(255,255,255,0.5);
+  background: linear-gradient(135deg, #fff3b0, #fdbb2d);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+  animation: companion-breathe 3.2s ease-in-out infinite;
+  font-size: 2.1rem;
+  transform-origin: center bottom;
+}
+
+.companion-avatar::after {
+  content: '•';
+  position: absolute;
+  top: 7px;
+  right: 9px;
+  width: 10px;
+  height: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.8);
+  color: #0f172a;
+  font-size: 0.7rem;
+  line-height: 1;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.25);
+}
+
+.companion-avatar.idle { animation-duration: 3.5s; }
+.companion-avatar.happy { animation-duration: 1.9s; }
+.companion-avatar.excited {
+  animation: companion-bounce 0.85s ease-in-out infinite;
+}
+.companion-avatar.roast {
+  animation: companion-spin 0.7s ease-in-out 1;
+}
+.companion-avatar.proud {
+  animation: companion-bounce 0.75s ease-in-out 2;
+}
+
+@keyframes companion-breathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-5px) scale(1.03); }
+}
+
+@keyframes companion-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  25% { transform: translateY(-7px) scale(1.02); }
+  55% { transform: translateY(0) scale(1.05); }
+  80% { transform: translateY(-4px) scale(1.02); }
+}
+
+@keyframes companion-spin {
+  0% { transform: rotate(-8deg) scale(1); }
+  35% { transform: rotate(8deg) scale(1.04); }
+  70% { transform: rotate(-6deg) scale(1.02); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: #0b0f19;
+  background: rgba(148, 163, 184, 0.08);
 }
 ::-webkit-scrollbar-thumb {
-  background: #222d46;
-  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3b4c73;
+  background: rgba(100, 116, 139, 0.55);
 }
 
-/* Glowing text and borders */
-.text-glow-gold {
-  text-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
-}
-.text-glow-purple {
-  text-shadow: 0 0 12px rgba(168, 85, 247, 0.6);
-}
-.text-glow-cyan {
-  text-shadow: 0 0 12px rgba(6, 182, 212, 0.6);
-}
-
-.border-glow-gold {
-  box-shadow: 0 0 15px rgba(245, 158, 11, 0.25);
-}
-.border-glow-purple {
-  box-shadow: 0 0 15px rgba(168, 85, 247, 0.25);
-}
-
-/* RPG Card Hover */
-.quest-card-hover {
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.quest-card-hover:hover {
-  transform: translateY(-4px);
-}
-
-/* Glass panel */
-.rpg-glass {
-  background: rgba(18, 24, 38, 0.75);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(40, 53, 83, 0.6);
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { AvatarId, DaySetup, VibeType } from '../types/quest';
 import { AVATAR_OPTIONS } from '../utils/demoData';
-import { parseFreeTimeToMinutes } from '../utils/questGenerator';
+import { extractGoalsFromText, parseFreeTimeToMinutes } from '../utils/questGenerator';
 import { soundFx } from '../utils/sound';
 import {
   Swords,
@@ -28,15 +28,14 @@ export const PlayerSetupScreen: React.FC = () => {
   const [heroName, setHeroName] = useState<string>(player.name || 'Hero');
   const [selectedAvatar, setSelectedAvatar] = useState<AvatarId>(player.avatar || 'cyber_mage');
 
-  // Step 2: Time & Vibe (Requirement 3)
   const [freeTime, setFreeTime] = useState<DaySetup['freeTime']>('2h');
   const [isCustomTime, setIsCustomTime] = useState<boolean>(false);
   const [customTimeMinutes, setCustomTimeMinutes] = useState<string>('90');
+  const [energy, setEnergy] = useState<'low' | 'normal' | 'high'>('normal');
   const [vibe, setVibe] = useState<VibeType>('productive');
 
-  // Step 3: What do YOU want to accomplish?
   const [customTasksInput, setCustomTasksInput] = useState<string>(
-    'Finish DSA assignment\nPractice volleyball\nClean my desk'
+    'I need to finish my DBMS assignment and I also want to play volleyball.'
   );
   const [chaosMode, setChaosMode] = useState<boolean>(false);
 
@@ -49,11 +48,13 @@ export const PlayerSetupScreen: React.FC = () => {
   ];
 
   const timePresets = [
+    { label: '15 min', val: '15m' as const, mins: 15 },
     { label: '30 min', val: '30m' as const, mins: 30 },
+    { label: '45 min', val: '45m' as const, mins: 45 },
     { label: '1 hour', val: '1h' as const, mins: 60 },
+    { label: '1.5 hours', val: '1h 30m' as const, mins: 90 },
     { label: '2 hours', val: '2h' as const, mins: 120 },
-    { label: '3 hours', val: '3h' as const, mins: 180 },
-    { label: '4+ hours', val: '4h+' as const, mins: 240 },
+    { label: '3+ hours', val: '3h' as const, mins: 180 },
   ];
 
   const calculatedTotalMinutes = isCustomTime
@@ -66,9 +67,9 @@ export const PlayerSetupScreen: React.FC = () => {
       setStep(step + 1);
     } else {
       const setupData: DaySetup = {
-        energy: vibe === 'low_energy' ? 'low' : vibe === 'energetic' ? 'high' : vibe === 'surprise' ? 'chaotic' : 'normal',
+        energy: energy,
         vibe,
-        goals: ['Custom User Goals'],
+        goals: extractGoalsFromText(customTasksInput),
         userCustomTasksInput: customTasksInput,
         freeTime: isCustomTime ? 'custom' : freeTime,
         customMinutes: isCustomTime ? calculatedTotalMinutes : undefined,
@@ -219,21 +220,20 @@ export const PlayerSetupScreen: React.FC = () => {
                   TIME & ENERGY
                 </div>
                 <h2 className="font-rpg font-black text-2xl sm:text-3xl text-white">
-                  SET YOUR TIME & VIBE
+                  ⚔️ BUILD YOUR QUEST
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                  How much free time do you have and what's your mood today?
+                  Tell us what you've got. We&apos;ll help turn it into an adventure.
                 </p>
               </div>
 
-              {/* Free Time Selection */}
               <div className="mb-6">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2 flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>⏰ How much free time do you have today?</span>
+                  <span>⏱️ Available Free Time</span>
                 </label>
 
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
                   {timePresets.map((t) => (
                     <button
                       key={t.val}
@@ -251,7 +251,6 @@ export const PlayerSetupScreen: React.FC = () => {
                       {t.label}
                     </button>
                   ))}
-
                   <button
                     onClick={() => {
                       soundFx.playClick(450);
@@ -263,29 +262,53 @@ export const PlayerSetupScreen: React.FC = () => {
                         : 'border-[#1e283f] bg-[#0a0d18] text-slate-400 hover:text-white'
                     }`}
                   >
-                    Custom ⚙️
+                    Custom
                   </button>
                 </div>
 
                 {isCustomTime && (
-                  <div className="flex items-center gap-2 mt-2 bg-[#090d18] p-3 rounded-2xl border border-purple-800/40">
-                    <span className="text-xs text-slate-400">Custom Free Time (Minutes):</span>
+                  <div className="mt-2 bg-[#090d18] p-3 rounded-2xl border border-purple-800/40">
+                    <label className="block text-[11px] text-slate-400 mb-2">Custom duration (minutes or like 1h 13m)</label>
                     <input
-                      type="number"
-                      min={15}
-                      max={720}
+                      type="text"
                       value={customTimeMinutes}
                       onChange={(e) => setCustomTimeMinutes(e.target.value)}
-                      className="w-28 bg-[#121728] border border-[#232f4b] rounded-xl px-3 py-1.5 text-xs text-white font-mono-stat focus:outline-none focus:border-purple-500"
+                      placeholder="17 minutes / 1h 13m / 2h 25m"
+                      className="w-full bg-[#121728] border border-[#232f4b] rounded-xl px-3 py-2 text-xs text-white font-mono-stat focus:outline-none focus:border-purple-500"
                     />
                   </div>
                 )}
               </div>
 
-              {/* Vibe Selection */}
+              <div className="mb-6">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2.5">
+                  🧠 What&apos;s your energy like?
+                </label>
+                <div className="grid grid-cols-3 gap-2.5">
+                  {[
+                    { id: 'low', label: '🥱 Low', text: 'Light studying, organizing, stretching, walking' },
+                    { id: 'normal', label: '😐 Normal', text: 'Balanced focus with room for a few tasks' },
+                    { id: 'high', label: '⚡ High', text: 'Workouts, hard study, focused output' },
+                  ].map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={() => setEnergy(option.id as 'low' | 'normal' | 'high')}
+                      className={`p-3 rounded-2xl border text-left transition ${
+                        energy === option.id
+                          ? 'border-cyan-400 bg-cyan-950/80 text-cyan-100'
+                          : 'border-[#1e283f] bg-[#0a0d18] text-slate-400 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="font-rpg font-bold text-xs sm:text-sm">{option.label}</div>
+                      <div className="text-[11px] mt-1 text-slate-300">{option.text}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2.5">
-                  🧠 What's your vibe today?
+                  ✨ What&apos;s your vibe today?
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {vibeOptions.map((v) => (
@@ -323,27 +346,26 @@ export const PlayerSetupScreen: React.FC = () => {
                   YOUR OBJECTIVES
                 </div>
                 <h2 className="font-rpg font-black text-2xl sm:text-3xl text-white">
-                  WHAT DO YOU WANT TO ACCOMPLISH?
+                  🎯 What do YOU want to accomplish?
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                  Type the tasks you want to tackle today. We'll turn them into your personal quest deck.
+                  Tell us the tasks and goals you actually care about today. We&apos;ll shape the plan around your real priorities.
                 </p>
               </div>
 
-              {/* Tasks Textarea Input */}
               <div className="mb-5">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                  🎯 Enter your tasks (one per line or separated by commas):
+                  Your goals & tasks
                 </label>
                 <textarea
                   rows={4}
                   value={customTasksInput}
                   onChange={(e) => setCustomTasksInput(e.target.value)}
-                  placeholder="e.g. Finish DSA assignment&#10;Practice volleyball&#10;Call Mom&#10;Clean my desk..."
+                  placeholder="I want to finish my assignment, practice volleyball and have some me-time..."
                   className="w-full bg-[#0a0d18] border border-[#232f4a] focus:border-purple-500 rounded-2xl p-4 text-sm text-white placeholder-slate-500 focus:outline-none transition leading-relaxed"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
-                  💡 Don't worry, you can easily add, edit, remove, or reorder any task on your dashboard later!
+                  We&apos;ll pull out likely tasks like DBMS assignment or volleyball and keep them visible in your quest board.
                 </p>
               </div>
 

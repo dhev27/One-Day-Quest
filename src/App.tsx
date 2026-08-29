@@ -6,6 +6,7 @@ import { RandomEventModal } from './components/RandomEventModal';
 import { SecretUnlockedModal } from './components/SecretUnlockedModal';
 import { QuestCompleteCelebration } from './components/QuestCompleteCelebration';
 import { QuestMasterModal } from './components/QuestMasterModal';
+import { CompanionWidget } from './components/CompanionWidget';
 
 // Screens
 import { LandingScreen } from './screens/LandingScreen';
@@ -25,7 +26,7 @@ const MainAppContent: React.FC = () => {
   const showNavbar = !['landing', 'setup', 'generating', 'end_day'].includes(currentScreen);
 
   return (
-    <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col font-['Outfit',sans-serif]">
+    <div className="app-shell min-h-screen flex flex-col font-['Outfit',sans-serif]">
       {showNavbar && <Navbar onOpenQuestMaster={() => setQuestMasterOpen(true)} />}
 
       <main className="flex-1">
@@ -42,7 +43,8 @@ const MainAppContent: React.FC = () => {
         {currentScreen === 'end_day' && <EndOfDayScreen />}
       </main>
 
-      {/* Global Modals & Notifications */}
+      {showNavbar && <CompanionWidget />}
+
       <LevelUpModal />
       <RandomEventModal />
       <SecretUnlockedModal />

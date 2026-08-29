@@ -47,6 +47,8 @@ export const QuestCard: React.FC<QuestCardProps> = ({
     convertSuggestionToActive,
     rejectSuggestion,
     deleteQuest,
+    abandonQuest,
+    triggerCompanionReaction,
   } = useGame();
 
   const getDifficultyColor = (diff: Quest['difficulty']) => {
@@ -126,7 +128,7 @@ export const QuestCard: React.FC<QuestCardProps> = ({
 
   return (
     <div
-      className={`rounded-3xl p-4 sm:p-5 border quest-card-hover relative transition-all duration-200 flex flex-col justify-between ${cardBorderClass}`}
+      className={`quest-card-surface rounded-[26px] p-4 sm:p-5 border relative flex flex-col justify-between transition-all duration-200 ${cardBorderClass}`}
     >
       {/* Top Banner Tag for User Created / Suggestion / Boss */}
       {quest.isUserCreated && (
@@ -151,6 +153,12 @@ export const QuestCard: React.FC<QuestCardProps> = ({
       )}
 
       <div>
+        {quest.reason && (
+          <div className="mb-3 rounded-xl border border-cyan-700/50 bg-cyan-950/30 p-2 text-[11px] text-cyan-100">
+            <span className="font-bold text-cyan-300">💡 Why this?</span> {quest.reason}
+          </div>
+        )}
+
         {/* Header Badges & Actions */}
         <div className="flex items-center justify-between gap-2 mb-3 mt-1">
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -280,7 +288,6 @@ export const QuestCard: React.FC<QuestCardProps> = ({
         {/* Actions */}
         <div className="flex items-center gap-1.5">
           {isSuggestion ? (
-            /* Suggestion Controls: ✓ Add to Quest vs ✕ Not for me */
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => {
@@ -291,7 +298,7 @@ export const QuestCard: React.FC<QuestCardProps> = ({
                 title="Reject Suggestion"
               >
                 <X className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Not for me</span>
+                <span className="hidden sm:inline">✕ Not for me</span>
               </button>
 
               <button
@@ -302,7 +309,7 @@ export const QuestCard: React.FC<QuestCardProps> = ({
                 className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-glow-xp flex items-center gap-1 transition hover:scale-105"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Add to Quest</span>
+                <span>✓ Add to Quest</span>
               </button>
             </div>
           ) : isLocked ? (
@@ -333,15 +340,41 @@ export const QuestCard: React.FC<QuestCardProps> = ({
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>Complete</span>
               </button>
+
+              <button
+                onClick={() => {
+                  abandonQuest(quest.id);
+                }}
+                onMouseEnter={() => triggerCompanionReaction('quest-skip-hover')}
+                onFocus={() => triggerCompanionReaction('quest-skip-hover')}
+                aria-label={`Skip ${quest.title}`}
+                className="px-2.5 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-[11px] font-semibold text-amber-700 transition hover:border-amber-300 hover:bg-amber-100"
+              >
+                Skip
+              </button>
             </div>
           ) : (
-            <button
-              onClick={() => acceptQuest(quest.id)}
-              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-extrabold shadow-glow-xp flex items-center gap-1.5 transition hover:scale-105 active:scale-95"
-            >
-              <Swords className="w-3.5 h-3.5" />
-              <span>Accept Quest ⚔️</span>
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onMouseEnter={() => triggerCompanionReaction('quest-skip-hover')}
+                onFocus={() => triggerCompanionReaction('quest-skip-hover')}
+                onClick={() => {
+                  abandonQuest(quest.id);
+                }}
+                aria-label={`Skip ${quest.title}`}
+                className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-[11px] font-semibold text-slate-600 transition hover:border-amber-200 hover:text-amber-700"
+              >
+                Skip
+              </button>
+
+              <button
+                onClick={() => acceptQuest(quest.id)}
+                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-extrabold shadow-glow-xp flex items-center gap-1.5 transition hover:scale-105 active:scale-95"
+              >
+                <Swords className="w-3.5 h-3.5" />
+                <span>Accept Quest ⚔️</span>
+              </button>
+            </div>
           )}
 
           {onOpenDetail && !isSuggestion && (

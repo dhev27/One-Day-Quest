@@ -47,6 +47,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onOpenQuestMas
     editQuest,
     reorderQuest,
     regenerateSuggestions,
+    rebuildQuest,
+    handlePlanChanged,
   } = useGame();
 
   const [activeTab, setActiveTab] = useState<'all' | 'user' | 'suggestions' | 'completed' | 'in_progress'>('all');
@@ -94,169 +96,118 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onOpenQuestMas
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-24">
-      {/* Top Banner / HUD Header */}
-      <div className="mb-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+    <div className="mx-auto max-w-7xl px-4 pb-28 pt-6 sm:px-6">
+      <div className="mb-6 rounded-[30px] border border-slate-200 bg-white/80 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.06)] backdrop-blur-sm sm:p-6">
+        <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-extrabold uppercase tracking-widest text-amber-400 flex items-center gap-1">
-                <span>☀️ TODAY'S ADVENTURE</span>
-              </span>
-              <span className="text-slate-600">•</span>
-              <span className="text-xs text-purple-300 font-semibold">{dayTheme}</span>
-            </div>
-            <h1 className="font-rpg font-black text-2xl sm:text-3xl md:text-4xl text-white">
-              MY QUEST BOARD ⚔️
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-600">
+              Good morning ☀️
+            </p>
+            <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl md:text-4xl">
+              {dayTheme ? 'Today’s quests are ready.' : 'Let’s make today real.'}
             </h1>
           </div>
 
-          {/* Quick HUD Metrics */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            {/* Day Score */}
-            <div className="px-3 py-2 rounded-2xl bg-[#111728] border border-[#222e49] flex items-center gap-2">
-              <Heart className="w-4 h-4 text-rose-400 fill-rose-400" />
-              <div>
-                <div className="text-[10px] uppercase font-bold text-slate-400">Day Score</div>
-                <div className="text-xs font-mono-stat font-extrabold text-rose-300">
-                  {dayProgressPct}%
-                </div>
-              </div>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Day score</div>
+              <div className="text-base font-bold text-slate-900">{dayProgressPct}%</div>
             </div>
-
-            {/* Quests Done */}
-            <div className="px-3 py-2 rounded-2xl bg-[#111728] border border-[#222e49] flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <div>
-                <div className="text-[10px] uppercase font-bold text-slate-400">Conquered</div>
-                <div className="text-xs font-mono-stat font-extrabold text-emerald-300">
-                  {completedCount} / {totalCount}
-                </div>
-              </div>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2">
+              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">Done</div>
+              <div className="text-base font-bold text-emerald-800">{completedCount} / {totalCount}</div>
             </div>
-
-            {/* Streak */}
-            <div className="px-3 py-2 rounded-2xl bg-orange-950/50 border border-orange-700/60 flex items-center gap-2">
-              <Flame className="w-4 h-4 text-orange-400 fill-orange-400 animate-pulse" />
-              <div>
-                <div className="text-[10px] uppercase font-bold text-orange-300">Streak</div>
-                <div className="text-xs font-mono-stat font-extrabold text-orange-200">
-                  {player.streak} Days
-                </div>
-              </div>
-            </div>
-
-            {/* Coins */}
             <button
               onClick={() => setCurrentScreen('shop')}
-              className="px-3 py-2 rounded-2xl bg-amber-950/50 hover:bg-amber-900/50 border border-amber-600/60 flex items-center gap-2 transition"
+              className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-left transition hover:translate-y-[-1px]"
             >
-              <Coins className="w-4 h-4 text-amber-400" />
-              <div className="text-left">
-                <div className="text-[10px] uppercase font-bold text-amber-300">Loot Coins</div>
-                <div className="text-xs font-mono-stat font-extrabold text-amber-200">
-                  {player.coins} 🪙
-                </div>
-              </div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-amber-700">Coins</div>
+              <div className="text-base font-bold text-amber-800">{player.coins} 🪙</div>
             </button>
           </div>
         </div>
 
-        {/* Big XP Progress Bar HUD */}
         <XPProgressBar />
       </div>
 
-      {/* Time Budget Meter (Requirement 7) */}
-      <TimeBudgetMeter />
+      <div className="mb-6">
+        <TimeBudgetMeter />
+      </div>
 
-      {/* Combo Banner */}
       {combo.active && (
-        <div className="mb-6 p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-orange-950/60 via-purple-950/60 to-pink-950/60 border border-orange-500/60 flex items-center justify-between gap-3 shadow-glow-gold/20 animate-pulse">
+        <div className="mb-6 flex items-center justify-between gap-3 rounded-[24px] border border-violet-200 bg-violet-50 p-3 sm:p-4">
           <div className="flex items-center gap-3">
-            <div className="text-2xl animate-bounce">🔥</div>
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-2xl">🔥</div>
             <div>
-              <div className="font-rpg font-extrabold text-sm sm:text-base text-amber-300">
-                {combo.label}
-              </div>
-              <div className="text-xs text-slate-300">
-                You're on fire! Consecutive completions award bonus streak XP and loot.
-              </div>
+              <div className="text-sm font-bold text-violet-800">{combo.label}</div>
+              <div className="text-xs text-violet-700">You’re on a nice little streak. Keep it rolling.</div>
             </div>
           </div>
-          <span className="text-xs font-mono-stat font-extrabold text-orange-300 bg-orange-950 px-2.5 py-1 rounded-lg border border-orange-600/50">
-            +25% XP BONUS
+          <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-700">
+            +25% XP
           </span>
         </div>
       )}
 
-      {/* Primary Action Header: ➕ Add Your Own Task & Quick Filters */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-        {/* Prominent "Add Your Own Task" CTA (Requirement 1) */}
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button
           onClick={handleOpenCreateModal}
-          className="px-5 py-3 rounded-2xl bg-gradient-to-r from-cyan-600 via-indigo-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white font-rpg font-extrabold text-sm shadow-glow-cyan flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition"
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
         >
-          <Plus className="w-5 h-5 text-yellow-300" />
-          <span>➕ ADD YOUR OWN TASK</span>
+          <Plus className="h-4 w-4" />
+          Add a task
         </button>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Summon Quest Master AI */}
+        <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => {
-              soundFx.playClick(600);
-              onOpenQuestMaster();
-            }}
-            className="px-3 py-2 rounded-xl bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-950 hover:from-indigo-800 hover:to-purple-800 border border-purple-500/50 text-purple-200 text-xs font-bold flex items-center gap-1.5 shadow-sm transition hover:scale-105"
+            onClick={() => rebuildQuest()}
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-violet-200 hover:text-violet-700"
           >
-            <Wand2 className="w-3.5 h-3.5 text-amber-300 animate-spin" />
-            <span>Summon Quests (AI)</span>
+            <RotateCw className="h-3.5 w-3.5" />
+            Refresh
           </button>
-
-          {/* Trigger Surprise Event */}
+          <button
+            onClick={() => handlePlanChanged('less_time')}
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-cyan-200 hover:text-cyan-700"
+          >
+            <Clock className="h-3.5 w-3.5" />
+            My plan changed
+          </button>
           <button
             onClick={() => triggerRandomEvent()}
-            className="px-3 py-2 rounded-xl bg-red-950/60 hover:bg-red-900/70 border border-red-700/60 text-red-300 text-xs font-bold flex items-center gap-1.5 shadow-sm transition hover:scale-105"
+            className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:-translate-y-0.5"
           >
-            <Dices className="w-3.5 h-3.5" />
-            <span>Surprise Event 🎲</span>
+            <Dices className="h-3.5 w-3.5" />
+            Surprise
           </button>
         </div>
       </div>
 
-      {/* SECTION 1: 👤 YOUR QUESTS (User Created & Active) (Requirement 4) */}
       <div className="mb-10">
-        <div className="flex items-center justify-between gap-2 mb-4 pb-2 border-b border-[#1f2c48]">
+        <div className="mb-4 flex items-center justify-between gap-2 border-b border-slate-200 pb-3">
           <div className="flex items-center gap-2">
-            <User className="w-5 h-5 text-cyan-400" />
-            <h2 className="font-rpg font-extrabold text-xl text-white">
-              YOUR QUESTS ({userQuests.length})
-            </h2>
+            <User className="h-4 w-4 text-violet-600" />
+            <h2 className="text-xl font-bold text-slate-900">Your quests ({userQuests.length})</h2>
           </div>
-          <span className="text-xs text-slate-400 font-mono-stat">
-            {userQuests.filter((q) => q.status === 'completed').length} / {userQuests.length} Completed
+          <span className="text-xs font-medium text-slate-500">
+            {userQuests.filter((q) => q.status === 'completed').length} done
           </span>
         </div>
 
         {userQuests.length === 0 ? (
-          <div className="p-8 text-center rounded-3xl bg-[#0f1424] border border-[#212d47] max-w-lg mx-auto my-4">
-            <div className="text-3xl mb-2">🎯</div>
-            <h3 className="font-rpg font-bold text-base text-white mb-1">
-              You haven't added any personal tasks yet!
-            </h3>
-            <p className="text-xs text-slate-400 mb-4">
-              Click below to enter anything you want to accomplish today.
-            </p>
+          <div className="mx-auto max-w-lg rounded-[28px] border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+            <div className="mb-2 text-3xl">🎯</div>
+            <h3 className="mb-1 text-lg font-bold text-slate-900">No tasks yet?</h3>
+            <p className="mb-4 text-sm text-slate-500">Add one and make today feel a little more manageable.</p>
             <button
               onClick={handleOpenCreateModal}
-              className="px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-rpg font-bold text-xs shadow-md transition"
+              className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
             >
-              ➕ ADD YOUR FIRST TASK
+              Add your first task
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {userQuests.map((quest, idx) => (
               <QuestCard
                 key={quest.id}
@@ -276,28 +227,22 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onOpenQuestMas
         )}
       </div>
 
-      {/* SECTION 2: ✨ QUEST SUGGESTIONS (AI Generated) (Requirement 4, 5, 6) */}
-      <div className="mb-10 p-5 sm:p-6 rounded-3xl bg-[#0f1222] border border-purple-800/40 relative">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-2 border-b border-[#212c47]">
+      <div className="mb-10 rounded-[30px] border border-violet-100 bg-violet-50/60 p-4 sm:p-5">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-yellow-300 animate-spin" />
+            <Sparkles className="h-4 w-4 text-violet-500" />
             <div>
-              <h2 className="font-rpg font-extrabold text-lg sm:text-xl text-purple-200">
-                QUEST SUGGESTIONS ({suggestedQuests.length})
-              </h2>
-              <p className="text-xs text-slate-400">
-                AI suggests. <strong>YOU decide.</strong> Add suggestions or reject them as you wish.
-              </p>
+              <h2 className="text-lg font-bold text-slate-900">Quest suggestions ({suggestedQuests.length})</h2>
+              <p className="text-xs text-slate-500">Lightweight ideas. You stay in charge.</p>
             </div>
           </div>
 
-          {/* Regenerate Suggestions Button (Requirement 6) */}
           <button
             onClick={regenerateSuggestions}
-            className="px-3.5 py-1.5 rounded-xl bg-purple-950/80 hover:bg-purple-900 border border-purple-600/60 text-purple-200 text-xs font-bold flex items-center gap-1.5 shadow-sm transition hover:scale-105 self-start sm:self-auto"
+            className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-violet-700 transition hover:-translate-y-0.5"
           >
-            <RotateCw className="w-3.5 h-3.5 text-yellow-400" />
-            <span>🎲 Give Me Different Ideas</span>
+            <RotateCw className="h-3.5 w-3.5" />
+            Different ideas
           </button>
         </div>
 

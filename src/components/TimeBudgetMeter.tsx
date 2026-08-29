@@ -10,6 +10,7 @@ export const TimeBudgetMeter: React.FC = () => {
     allowOvertime,
     setAllowOvertime,
     trimQuestsToFitTime,
+    optimizeQuest,
   } = useGame();
 
   const totalUsedMinutes = quests
@@ -70,13 +71,12 @@ export const TimeBudgetMeter: React.FC = () => {
         />
       </div>
 
-      {/* Overtime Alert Banner (Requirement 11) */}
       {isOvertime && !allowOvertime && (
         <div className="mt-3 p-3 rounded-xl bg-amber-950/60 border border-amber-500/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 animate-fadeIn">
           <div className="flex items-start gap-2 text-xs text-amber-200">
             <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
             <span>
-              Your quest is <strong>{overtimeDiff} minutes</strong> over your scheduled free time.
+              <strong>⚠️ Your quest is {overtimeDiff} minutes over</strong> your available time.
             </span>
           </div>
 
@@ -84,12 +84,12 @@ export const TimeBudgetMeter: React.FC = () => {
             <button
               onClick={() => {
                 soundFx.playClick(400);
-                trimQuestsToFitTime();
+                optimizeQuest();
               }}
               className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1 transition"
             >
               <Scissors className="w-3 h-3 text-amber-400" />
-              <span>Trim Quest</span>
+              <span>✨ Optimize Quest</span>
             </button>
 
             <button

@@ -44,254 +44,173 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenQuestMaster }) => {
 
   return (
     <>
-      {/* Top Navbar */}
-      <header className="sticky top-0 z-40 w-full bg-[#0a0e1a]/90 backdrop-blur-md border-b border-[#1f293d] shadow-lg">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex items-center justify-between gap-2">
-          {/* Logo & Brand */}
+      <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-2.5 sm:px-6">
           <div className="flex items-center gap-3">
             <button
               onClick={() => handleNav('landing')}
-              className="flex items-center gap-2 text-left group transition"
+              className="group flex items-center gap-2 text-left transition-transform hover:scale-[1.01]"
             >
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-amber-500 p-[2px] shadow-glow-purple group-hover:scale-105 transition">
-                <div className="w-full h-full bg-[#0c101c] rounded-[10px] flex items-center justify-center text-xl">
-                  ⚔️
-                </div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 via-indigo-500 to-amber-400 text-xl shadow-sm">
+                ⚡
               </div>
               <div className="hidden sm:block">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-rpg font-extrabold tracking-wider text-base sm:text-lg bg-gradient-to-r from-amber-300 via-purple-300 to-cyan-300 bg-clip-text text-transparent">
-                    ONE DAY QUEST
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold tracking-[0.18em] text-slate-900 text-[0.72rem] uppercase">
+                    One Day Quest
                   </span>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-900/60 text-purple-300 border border-purple-700/50">
-                    BETA
+                  <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-violet-700">
+                    beta
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400 font-medium">Turn Your Day Into An Adventure</p>
+                <p className="text-[11px] text-slate-500">Your day, gently leveled up.</p>
               </div>
             </button>
           </div>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1 bg-[#121829]/80 p-1 rounded-xl border border-[#222d46]">
+          <nav className="hidden items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-1 md:flex">
             <button
               onClick={() => handleNav('dashboard')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
-                currentScreen === 'dashboard'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                currentScreen === 'dashboard' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-white hover:text-slate-900'
               }`}
             >
-              <Shield className="w-3.5 h-3.5 text-amber-400" />
-              <span>Quests</span>
+              <span className="flex items-center gap-1.5">
+                <Shield className="h-3.5 w-3.5" />
+                Quests
+              </span>
             </button>
 
             <button
               onClick={() => handleNav('map')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
-                currentScreen === 'map'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                currentScreen === 'map' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-white hover:text-slate-900'
               }`}
             >
-              <MapIcon className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Day Journey</span>
+              <span className="flex items-center gap-1.5">
+                <MapIcon className="h-3.5 w-3.5" />
+                Journey
+              </span>
             </button>
 
             <button
               onClick={() => handleNav('shop')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
-                currentScreen === 'shop'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                currentScreen === 'shop' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-white hover:text-slate-900'
               }`}
             >
-              <ShoppingBag className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Rewards Shop</span>
+              <span className="flex items-center gap-1.5">
+                <ShoppingBag className="h-3.5 w-3.5" />
+                Rewards
+              </span>
             </button>
 
             <button
               onClick={() => handleNav('achievements')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
-                currentScreen === 'achievements'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                currentScreen === 'achievements' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-white hover:text-slate-900'
               }`}
             >
-              <Trophy className="w-3.5 h-3.5 text-yellow-400" />
-              <span>Achievements</span>
+              <span className="flex items-center gap-1.5">
+                <Trophy className="h-3.5 w-3.5" />
+                Wins
+              </span>
             </button>
 
             <button
               onClick={() => handleNav('profile')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
-                currentScreen === 'profile'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                currentScreen === 'profile' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-white hover:text-slate-900'
               }`}
             >
-              <User className="w-3.5 h-3.5 text-purple-400" />
-              <span>Hero Sheet</span>
+              <span className="flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5" />
+                Profile
+              </span>
             </button>
           </nav>
 
-          {/* Right Status Badges & Quick Action Controls */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Quest Master AI Button */}
             <button
               onClick={() => {
                 soundFx.playClick(560);
                 onOpenQuestMaster();
               }}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-indigo-900/80 to-purple-900/80 hover:from-indigo-800 hover:to-purple-800 border border-purple-500/40 text-purple-200 text-xs font-bold shadow-glow-purple hover:scale-105 transition"
+              className="hidden items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-violet-700 transition hover:scale-[1.02] sm:flex"
               title="Summon Quest Master AI"
             >
-              <Wand2 className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
-              <span className="hidden sm:inline">Quest Master</span>
-              <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1 rounded font-mono">AI</span>
+              <Wand2 className="h-3.5 w-3.5" />
+              AI
             </button>
 
-            {/* Surprise Event trigger */}
             <button
               onClick={() => triggerRandomEvent()}
-              className="p-1.5 sm:px-2 sm:py-1.5 rounded-lg bg-red-950/50 hover:bg-red-900/60 border border-red-700/50 text-red-300 text-xs font-semibold flex items-center gap-1 transition group"
+              className="rounded-full border border-rose-200 bg-rose-50 px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-rose-600 transition hover:scale-[1.02]"
               title="Trigger Surprise Event"
             >
-              <Dices className="w-4 h-4 text-red-400 group-hover:rotate-45 transition transform" />
-              <span className="hidden lg:inline text-[11px]">Surprise!</span>
+              <span className="flex items-center gap-1">
+                <Dices className="h-3.5 w-3.5" />
+                surprise
+              </span>
             </button>
 
-            {/* Streak Counter */}
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-orange-950/40 border border-orange-700/50 text-orange-400 text-xs font-bold">
-              <Flame className="w-3.5 h-3.5 fill-orange-500 text-orange-400 animate-bounce" />
+            <div className="flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-700">
+              <Flame className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
               <span>{player.streak}d</span>
             </div>
 
-            {/* Quest Coins */}
             <button
               onClick={() => handleNav('shop')}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-950/40 border border-amber-600/50 text-amber-300 text-xs font-bold hover:bg-amber-900/40 transition"
+              className="flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-700"
               title="Your Quest Coins"
             >
-              <Coins className="w-3.5 h-3.5 text-amber-400" />
-              <span className="font-mono-stat">{player.coins}</span>
+              <Coins className="h-3.5 w-3.5" />
+              <span>{player.coins}</span>
             </button>
 
-            {/* Chaos Mode Toggle */}
             <button
               onClick={toggleChaosMode}
-              className={`p-1.5 rounded-lg border text-xs font-bold transition flex items-center gap-1 ${
+              className={`rounded-full border px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] transition ${
                 player.chaosMode
-                  ? 'bg-rose-950 border-rose-500 text-rose-300 shadow-glow-ruby'
-                  : 'bg-slate-900/70 border-slate-700 text-slate-400 hover:text-slate-200'
+                  ? 'border-rose-200 bg-rose-50 text-rose-600'
+                  : 'border-slate-200 bg-white text-slate-600'
               }`}
-              title={player.chaosMode ? 'Chaos Mode Active 😈' : 'Normal Adventure Mode'}
+              title={player.chaosMode ? 'Chaos Mode Active' : 'Normal Adventure Mode'}
             >
-              <span className="text-sm">😈</span>
-              <span className="hidden xl:inline text-[10px]">{player.chaosMode ? 'CHAOS' : 'NORMAL'}</span>
+              {player.chaosMode ? 'chaos' : 'calm'}
             </button>
 
-            {/* Sound FX Toggle */}
             <button
               onClick={toggleSound}
-              className="p-1.5 rounded-lg bg-slate-900/70 hover:bg-slate-800 border border-slate-700 text-slate-300 transition"
+              className="rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 transition hover:text-slate-900"
               title={player.soundEnabled ? 'Sound On' : 'Sound Muted'}
             >
-              {player.soundEnabled ? (
-                <Volume2 className="w-4 h-4 text-cyan-400" />
-              ) : (
-                <VolumeX className="w-4 h-4 text-slate-500" />
-              )}
+              {player.soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
             </button>
 
-            {/* Quick Hero Avatar preview */}
             <button
               onClick={() => handleNav('profile')}
-              className="flex items-center gap-1.5 pl-1.5 pr-2 py-1 rounded-lg bg-[#141b2d] hover:bg-[#1c263d] border border-indigo-700/40 transition"
+              className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-1.5 py-1 text-left shadow-sm"
               title="Open Hero Profile"
             >
               <span className="text-base">{currentAvatar.emoji}</span>
-              <div className="hidden sm:block text-left leading-none">
-                <div className="text-[10px] font-bold text-amber-400">LVL {player.level}</div>
-                <div className="text-[11px] font-semibold text-slate-200 truncate max-w-[70px]">
-                  {player.name.split(' ')[0]}
-                </div>
+              <div className="hidden sm:block leading-none">
+                <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-violet-600">Lvl {player.level}</div>
+                <div className="text-[10px] font-semibold text-slate-700">{player.name.split(' ')[0]}</div>
               </div>
             </button>
 
-            {/* End Day Button */}
             <button
               onClick={finishDay}
-              className="hidden lg:flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-600/90 to-yellow-600/90 hover:from-amber-500 hover:to-yellow-500 text-slate-950 font-bold text-xs shadow-md transition"
+              className="hidden items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-700 lg:flex"
               title="Conclude Today's Adventure & Get Final Score"
             >
-              <Moon className="w-3.5 h-3.5" />
-              <span>Finish Day</span>
+              <Moon className="h-3.5 w-3.5" />
+              <span>Finish</span>
             </button>
           </div>
         </div>
       </header>
-
-      {/* Mobile Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#090d18]/95 backdrop-blur-lg border-t border-[#1e273d] px-2 py-1.5 flex items-center justify-around">
-        <button
-          onClick={() => handleNav('dashboard')}
-          className={`flex flex-col items-center py-1 px-2 rounded-lg text-[10px] font-semibold transition ${
-            currentScreen === 'dashboard' ? 'text-purple-400' : 'text-slate-400'
-          }`}
-        >
-          <Shield className="w-5 h-5 mb-0.5" />
-          <span>Quests</span>
-        </button>
-
-        <button
-          onClick={() => handleNav('map')}
-          className={`flex flex-col items-center py-1 px-2 rounded-lg text-[10px] font-semibold transition ${
-            currentScreen === 'map' ? 'text-cyan-400' : 'text-slate-400'
-          }`}
-        >
-          <MapIcon className="w-5 h-5 mb-0.5" />
-          <span>Journey</span>
-        </button>
-
-        <button
-          onClick={() => handleNav('shop')}
-          className={`flex flex-col items-center py-1 px-2 rounded-lg text-[10px] font-semibold transition ${
-            currentScreen === 'shop' ? 'text-emerald-400' : 'text-slate-400'
-          }`}
-        >
-          <ShoppingBag className="w-5 h-5 mb-0.5" />
-          <span>Shop</span>
-        </button>
-
-        <button
-          onClick={() => handleNav('achievements')}
-          className={`flex flex-col items-center py-1 px-2 rounded-lg text-[10px] font-semibold transition ${
-            currentScreen === 'achievements' ? 'text-amber-400' : 'text-slate-400'
-          }`}
-        >
-          <Trophy className="w-5 h-5 mb-0.5" />
-          <span>Badges</span>
-        </button>
-
-        <button
-          onClick={() => handleNav('profile')}
-          className={`flex flex-col items-center py-1 px-2 rounded-lg text-[10px] font-semibold transition ${
-            currentScreen === 'profile' ? 'text-purple-400' : 'text-slate-400'
-          }`}
-        >
-          <User className="w-5 h-5 mb-0.5" />
-          <span>Hero</span>
-        </button>
-
-        <button
-          onClick={finishDay}
-          className="flex flex-col items-center py-1 px-2 rounded-lg text-[10px] font-semibold text-amber-400"
-        >
-          <Moon className="w-5 h-5 mb-0.5" />
-          <span>Finish</span>
-        </button>
-      </nav>
     </>
   );
 };

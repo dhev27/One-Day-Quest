@@ -19,14 +19,42 @@ export function getRandomDayTheme(): string {
 
 export function parseFreeTimeToMinutes(freeTime: DaySetup['freeTime'], customMinutes?: number): number {
   if (customMinutes && customMinutes > 0) return customMinutes;
-  switch (freeTime) {
+
+  if (typeof freeTime === 'number') return Math.max(15, freeTime);
+
+  const normalized = String(freeTime || '2h').toLowerCase().trim();
+  const hourMatch = normalized.match(/(\d+(?:\.\d+)?)h/);
+  const minuteMatch = normalized.match(/(\d+(?:\.\d+)?)m/);
+  const digitMatch = normalized.match(/(\d+(?:\.\d+)?)/);
+
+  if (hourMatch || minuteMatch || digitMatch) {
+    const hours = hourMatch ? Number(hourMatch[1]) : 0;
+    const minutes = minuteMatch ? Number(minuteMatch[1]) : 0;
+    const parsed = Math.round(hours * 60 + minutes);
+    if (parsed > 0) return parsed;
+  }
+
+  switch (normalized) {
+    case '15m': return 15;
     case '30m': return 30;
+    case '45m': return 45;
     case '1h': return 60;
+    case '1h 30m':
+    case '90m': return 90;
     case '2h': return 120;
     case '3h': return 180;
     case '4h+': return 240;
     case 'custom': return customMinutes || 60;
-    default: return 120;
+    default:
+      if (normalized.includes('h')) {
+        const hours = Number(normalized.replace(/[^\d.]/g, '')) || 1;
+        return Math.round(hours * 60);
+      }
+      if (normalized.includes('m')) {
+        const minutes = Number(normalized.replace(/[^\d.]/g, '')) || 30;
+        return Math.round(minutes);
+      }
+      return 120;
   }
 }
 
@@ -106,6 +134,17 @@ export function parseUserTasksInput(text: string): Quest[] {
   });
 }
 
+export function extractGoalsFromText(text: string): string[] {
+  if (!text || !text.trim()) return [];
+
+  const lines = text
+    .split(/[\n,;•]+/)
+    .map((line) => line.replace(/^[-*\d.)\s]+/, '').trim())
+    .filter((line) => line.length > 2);
+
+  return lines.slice(0, 6);
+}
+
 // Pool of smart suggestions categorized by vibe and duration
 export interface SuggestionTemplate {
   id: string;
@@ -119,6 +158,7 @@ export interface SuggestionTemplate {
   vibe: VibeType[];
   icon: string;
   priority: PriorityLevel;
+  reason: string;
 }
 
 const SUGGESTION_POOL: SuggestionTemplate[] = [
@@ -129,11 +169,12 @@ const SUGGESTION_POOL: SuggestionTemplate[] = [
     description: 'Go for a 20-minute walk outside without checking phone notifications.',
     flavorText: 'Natural sunlight restores 40% of baseline mental mana.',
     category: 'fitness',
-    duration: 30,
+    duration: 20,
     energy: 'low',
     vibe: ['chill', 'low_energy', 'surprise', 'productive'],
     icon: '🚶',
     priority: 'normal',
+    reason: 'You have a small remaining window and your energy is light, so this keeps momentum without draining you.',
   },
   {
     id: 'sug-focus-sprint',
@@ -147,6 +188,7 @@ const SUGGESTION_POOL: SuggestionTemplate[] = [
     vibe: ['productive', 'energetic'],
     icon: '📚',
     priority: 'important',
+    reason: 'You have enough time for a focused block and your current vibe leans productive.',
   },
   {
     id: 'sug-room-reset',
@@ -155,11 +197,12 @@ const SUGGESTION_POOL: SuggestionTemplate[] = [
     description: 'Clear desk clutter, make the bed, and organize your work arena.',
     flavorText: 'An orderly chamber grants +20% focus aura.',
     category: 'chores',
-    duration: 30,
+    duration: 15,
     energy: 'low',
     vibe: ['chill', 'low_energy', 'productive', 'surprise'],
     icon: '🧹',
     priority: 'normal',
+    reason: 'This is a light win that fits your remaining time without forcing a bigger task.',
   },
   {
     id: 'sug-stretch-meditate',
@@ -168,11 +211,12 @@ const SUGGESTION_POOL: SuggestionTemplate[] = [
     description: 'Drink a tall glass of cold water and do full-body stretches or breathing.',
     flavorText: 'Cooldown phases prevent hero burnouts.',
     category: 'recovery',
-    duration: 30,
+    duration: 15,
     energy: 'low',
     vibe: ['chill', 'low_energy', 'surprise'],
     icon: '🧘',
     priority: 'chill',
+    reason: 'You have low energy and only a short window left, so this is a realistic recovery action.',
   },
   {
     id: 'sug-social-npc',
@@ -181,11 +225,12 @@ const SUGGESTION_POOL: SuggestionTemplate[] = [
     description: 'Text a friend or family member a meme or quick check-in.',
     flavorText: 'Party morale directly boosts daily luck stats.',
     category: 'social',
-    duration: 30,
+    duration: 10,
     energy: 'low',
     vibe: ['chill', 'energetic', 'surprise'],
     icon: '💬',
     priority: 'chill',
+    reason: 'There is a brief pocket of time left and a quick social reset fits your current pace.',
   },
   {
     id: 'sug-creative-doodle',
@@ -194,11 +239,12 @@ const SUGGESTION_POOL: SuggestionTemplate[] = [
     description: 'Sketch, write, record, or create something original for 20 minutes without judging the result.',
     flavorText: 'Creation is magic cast into the physical realm.',
     category: 'creative',
-    duration: 30,
+    duration: 20,
     energy: 'medium',
     vibe: ['productive', 'energetic', 'surprise'],
     icon: '🎨',
     priority: 'normal',
+    reason: 'You still have a creative window and this fits a moderate energy level without overloading the plan.',
   },
   {
     id: 'sug-campus-explore',
@@ -231,24 +277,34 @@ const SUGGESTION_POOL: SuggestionTemplate[] = [
 export function generateSmartSuggestions(
   remainingMinutes: number,
   vibe: VibeType = 'productive',
-  rejectedIds: string[] = []
+  rejectedIds: string[] = [],
+  energy: 'low' | 'normal' | 'high' | 'chaotic' = 'normal',
+  existingTasks: Quest[] = []
 ): Quest[] {
-  // Filter out rejected suggestions
   let pool = SUGGESTION_POOL.filter((item) => !rejectedIds.includes(item.id));
-
-  // If pool is empty, reset filter
   if (pool.length === 0) pool = SUGGESTION_POOL;
 
-  // Filter based on remaining time if reasonable
-  let candidates = pool.filter((item) => item.duration <= Math.max(remainingMinutes, 30));
-  if (candidates.length < 2) candidates = pool;
+  const usedMinutes = existingTasks.reduce((sum, item) => sum + (item.timeEstimateMinutes || 0), 0);
+  const effectiveRemaining = Math.max(10, Math.min(remainingMinutes, Math.max(15, 180 - usedMinutes)));
 
-  // Shuffle and pick 2-3 suggestions
-  const shuffled = candidates.sort(() => 0.5 - Math.random());
+  let candidates = pool.filter((item) => {
+    if (item.duration > effectiveRemaining + 20) return false;
+    if (vibe === 'low_energy' && item.energy === 'high') return false;
+    if (vibe === 'energetic' && item.energy === 'low') return false;
+    if (energy === 'low' && item.energy === 'high') return false;
+    if (energy === 'high' && item.energy === 'low') return false;
+    return true;
+  });
+
+  if (candidates.length < 2) {
+    candidates = pool.filter((item) => item.duration <= Math.max(effectiveRemaining + 30, 30));
+  }
+
+  const shuffled = [...candidates].sort(() => 0.5 - Math.random());
   const selected = shuffled.slice(0, Math.min(3, shuffled.length));
 
   return selected.map((sug) => {
-    const xp = sug.duration >= 45 ? 120 : 70;
+    const xp = sug.duration >= 45 ? 120 : sug.duration >= 20 ? 80 : 55;
     const coins = Math.round(xp * 0.3);
 
     return {
@@ -268,6 +324,7 @@ export function generateSmartSuggestions(
       timeEstimateMinutes: sug.duration,
       icon: sug.icon,
       comboType: sug.category === 'fitness' ? 'wellness' : 'productivity',
+      reason: sug.reason,
     };
   });
 }
